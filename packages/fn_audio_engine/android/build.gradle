@@ -1,0 +1,43 @@
+// The Android Gradle Plugin builds the native code with the Android NDK.
+
+group 'com.fnaudio.fn_audio_engine'
+version '1.0'
+
+// 本模块作为宿主工程的插件子模块构建：AGP 版本由根工程 settings.gradle.kts
+// 统一提供（8.x），这里不能再声明旧版 classpath，否则 AGP 7/8 会同时进入
+// 插件 classpath 导致构建失败。
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.fnaudio.fn_audio_engine'
+
+    // 与宿主工程保持一致（flutter.compileSdkVersion 当前为 36）。
+    compileSdkVersion 36
+
+    // 显式写死，避免引用库模块自身不存在的 android.ndkVersion 属性；
+    // 与 Flutter 3.41 的 flutter.ndkVersion 保持一致。
+    ndkVersion "28.2.13676358"
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    defaultConfig {
+        // cpal 的 AAudio 后端需要 API 26+，这里取 26 保证输出路径可用。
+        minSdkVersion 26
+    }
+}
+
+apply from: "../cargokit/gradle/plugin.gradle"
+cargokit {
+    manifestDir = "../rust"
+    libname = "fn_audio_engine"
+}

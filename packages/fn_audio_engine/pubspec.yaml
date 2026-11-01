@@ -1,0 +1,28 @@
+name: fn_audio_engine
+description: "FN Audio 本地音频引擎：全格式解码 + 本地 DSP（Rust / flutter_rust_bridge）。"
+version: 0.1.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.5.0
+  flutter: '>=3.3.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # 必须与主工程、smtc_windows 的 codegen 版本一致。
+  flutter_rust_bridge: 2.11.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        ffiPlugin: true
+      ios:
+        ffiPlugin: true
+      windows:
+        ffiPlugin: true

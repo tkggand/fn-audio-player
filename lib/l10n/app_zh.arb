@@ -1,0 +1,748 @@
+{
+  "@@locale": "zh",
+  "appTitle": "FN Audio",
+  "tabHome": "首页",
+  "tabClips": "片段",
+  "tabLibrary": "曲库",
+  "commonCancel": "取消",
+  "commonSave": "保存",
+  "commonClose": "关闭",
+  "commonRetry": "重试",
+  "meTitle": "我的",
+  "meGuest": "未登录",
+  "meAccountAdmin": "管理员",
+  "meAccountLocal": "本地曲库",
+  "groupAudio": "音频",
+  "groupPlaybackLibrary": "播放与曲库",
+  "groupSystem": "系统",
+  "groupPlayback": "播放",
+  "meEqEffects": "均衡器与音效",
+  "meEqDefault": "原声",
+  "meEqEnabled": "已启用",
+  "meQualityTier": "音质档位",
+  "rgModeTitle": "ReplayGain 模式",
+  "rgOff": "关闭",
+  "rgTrack": "按音轨",
+  "rgAlbum": "按专辑",
+  "meFade": "淡入淡出",
+  "fadeSeconds": "{seconds} 秒",
+  "@fadeSeconds": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "meDevice": "播放设备",
+  "meDeviceLocal": "本机扬声器",
+  "meSignalPath": "信号路径",
+  "meScanLibrary": "扫描曲库",
+  "scanLoading": "加载中…",
+  "scanProgress": "扫描中 {percent}%",
+  "@scanProgress": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "scanIdle": "空闲",
+  "theme": "主题",
+  "themeDark": "深色",
+  "themeLight": "浅色",
+  "logout": "退出登录",
+  "logoutConfirmTitle": "退出登录",
+  "logoutConfirmBody": "确定退出当前账号？",
+  "logoutAction": "退出",
+  "settingsTitle": "设置",
+  "settingSoftMute": "暂停软静音",
+  "settingAutoPlayNext": "自动播放下一首",
+  "settingSyncEnabled": "多端播放状态同步",
+  "settingBackendUrl": "后端地址",
+  "settingDspJobs": "转码并发数",
+  "serverAddressTitle": "服务器地址",
+  "serverAddressHint": "修改后需重新登录（旧会话对新服务器无效）",
+  "serverSaveAndRelogin": "保存并重登",
+  "language": "语言",
+  "languageZh": "简体中文",
+  "languageEn": "English",
+  "languageSystem": "跟随系统",
+  "saveFailed": "保存失败：{error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "playerNoSong": "未选择歌曲",
+  "playbackFailed": "播放失败：{error}",
+  "@playbackFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "playerOpFailed": "操作失败：{error}",
+  "@playerOpFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "castingTo": "正在投屏到 {name}",
+  "@castingTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "playerFx": "音效",
+  "playerEqReplayGain": "均衡器预设 · ReplayGain",
+  "playerPassthrough": "原声直通",
+  "more": "更多",
+  "moreQueueSummary": "{count} 首待播 · {artist}",
+  "@moreQueueSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "artist": {
+        "type": "String"
+      }
+    }
+  },
+  "moreUpNext": "接下来",
+  "moreQueue": "播放队列",
+  "moreLyrics": "歌词",
+  "moreLyricsSub": "逐行同步",
+  "moreRelated": "相关",
+  "moreRelatedSub": "艺人 · 专辑",
+  "moreSignalPath": "信号路径",
+  "moreSignalPathSub": "查看完整处理链路",
+  "moreDevice": "播放设备",
+  "moreDeviceSub": "本机 / DLNA",
+  "loadFailed": "加载失败",
+  "loadFailedTip": "请检查网络连接或后端服务，稍后再试",
+  "loadFailedWith": "加载失败：{error}",
+  "@loadFailedWith": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noHistory": "还没有播放记录",
+  "homeTitle": "首页",
+  "recentPlayed": "最近播放",
+  "continueListening": "继续收听",
+  "clipsTitle": "片段",
+  "clipsEmpty": "还没有片段",
+  "clipsUnavailable": "曲库服务端暂未提供视频片段接口，接入后这里会按现场 / 翻唱 / 已收藏分组展示。",
+  "filterAll": "全部",
+  "filterLive": "现场",
+  "filterCover": "翻唱",
+  "filterFavorites": "已收藏",
+  "filterRecent": "最近",
+  "filterLossy": "有损",
+  "libraryTitle": "曲库",
+  "playlistsTitle": "歌单",
+  "allSongs": "全部歌曲",
+  "songCount": "{count} 首",
+  "@songCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noPlaylists": "还没有歌单，点右上角 + 新建",
+  "playlistsLoadFailed": "歌单加载失败",
+  "noMatchedSongs": "没有匹配的歌曲",
+  "noMatchedAlbums": "没有匹配的专辑",
+  "noMatchedArtists": "没有匹配的艺人",
+  "noMatchedPlaylists": "没有匹配的歌单",
+  "newPlaylist": "新建歌单",
+  "playlistName": "歌单名称",
+  "create": "创建",
+  "createFailed": "创建失败：{error}",
+  "@createFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "playlistSongCount": "歌单 · {count} 首",
+  "@playlistSongCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "artistSongCount": "{artist} · {count} 首",
+  "@artistSongCount": {
+    "placeholders": {
+      "artist": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "queueEmpty": "播放队列为空",
+  "searchSongs": "歌曲",
+  "searchAlbums": "专辑",
+  "searchArtists": "艺人",
+  "searchPlaylists": "歌单",
+  "searchHint": "歌曲、专辑、艺人",
+  "searchStart": "输入关键词开始搜索",
+  "searchFailed": "搜索失败：{error}",
+  "@searchFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "historyTitle": "收听历史",
+  "tuningTitle": "调音",
+  "tuningEqualizer": "均衡器",
+  "tuningToggleFailed": "切换失败：{error}",
+  "@tuningToggleFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tuningEqCleared": "已清除均衡器",
+  "tuningEqClearFailed": "清除失败：{error}",
+  "@tuningEqClearFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tuningApplyFailed": "应用失败：{error}",
+  "@tuningApplyFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tuningPeqApplied": "PEQ 已应用",
+  "tuningClear": "清除",
+  "tuningFadeIn": "淡入",
+  "tuningFadeOut": "淡出",
+  "tuningFadesSaved": "淡入淡出已保存",
+  "tuningBandCount": "{count} 段",
+  "@tuningBandCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tuningPresetLabel": "预设",
+  "tuningPresets": "音效预设",
+  "tuningPresetNone": "原声（无音效）",
+  "tuningPresetSystem": "系统",
+  "tuningAddBand": "添加频段",
+  "tuningApply": "应用",
+  "tuningBandType": "频段类型",
+  "tuningAutoeqHint": "粘贴 AutoEq 参数文本，例如：\nPreamp: -6.2 dB\nFilter 1: ON PK Fc 105 Hz Gain 5.5 dB Q 0.70",
+  "tuningAutoeqPaste": "请粘贴 AutoEq 参数文本",
+  "tuningImportApply": "导入并应用",
+  "tuningImportOk": "已导入 {count} 段",
+  "@tuningImportOk": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "tuningImportOkWithHeadroom": "已导入 {count} 段，预留 {headroom}dB headroom",
+  "@tuningImportOkWithHeadroom": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "headroom": {
+        "type": "String"
+      }
+    }
+  },
+  "tuningImportNotOk": "导入未成功",
+  "tuningImportError": "导入失败：{error}",
+  "@tuningImportError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tuningDeletePresetTitle": "删除预设",
+  "tuningDeletePresetBody": "确定删除「{name}」？",
+  "@tuningDeletePresetBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tuningDelete": "删除",
+  "tuningDeleteFailed": "删除失败：{error}",
+  "@tuningDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "commonOk": "确定",
+  "commonRemove": "移除",
+  "commonDelete": "删除",
+  "commonEdit": "编辑",
+  "lossy": "有损",
+  "myMusic": "我的音乐",
+  "favorites": "收藏",
+  "noFavorites": "暂无收藏",
+  "noPlayHistory": "暂无播放历史",
+  "noPlaylistsHint": "还没有歌单，点击右上角新建",
+  "deletePlaylist": "删除歌单",
+  "deletePlaylistBody": "确定删除「{name}」？",
+  "@deletePlaylistBody": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "playAll": "播放全部",
+  "addSongs": "加入歌曲",
+  "noPlaylistSongs": "这个歌单还没有歌曲",
+  "noPlaylistSongsHint": "点右上角 + 号，从收藏或最近播放里挑几首",
+  "noSongsToAdd": "暂无可添加的歌曲（先收藏或播放歌曲）",
+  "scanPageTitle": "扫描与维护",
+  "scanStatusHeader": "扫描状态",
+  "scanLibrary": "曲库扫描",
+  "scanProgressLabel": "扫描进度",
+  "scanLastDone": "上次完成",
+  "scanLastStats": "上次统计",
+  "scanFiles": "扫描文件",
+  "scanAddedUpdated": "新增 / 更新",
+  "scanRemoved": "清理失效",
+  "scanSkipped": "跳过",
+  "scanFailedCount": "失败",
+  "scanStart": "开始扫描",
+  "scanFullRescan": "全量重扫",
+  "scanRootsHeader": "扫描目录",
+  "scanRootsHint": "只扫描这些根目录；移除目录仅停止扫描，已入库记录保留。",
+  "scanNoRoots": "暂无扫描目录",
+  "scanRootEnabled": "启用中",
+  "scanRootDisabled": "已停用",
+  "scanAddDir": "添加目录",
+  "scanAddRootTitle": "添加扫描目录",
+  "scanRootPath": "目录路径",
+  "scanRemoveRootTitle": "移除扫描目录",
+  "scanRemoveRootBody": "确定移除「{path}」？\n仅停止扫描该目录，已入库记录保留。",
+  "@scanRemoveRootBody": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "scanStatusLoadFailed": "状态加载失败：{error}",
+  "@scanStatusLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanRunning": "进行中 {progress}%",
+  "@scanRunning": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "scanStartedFull": "已开始全量重扫",
+  "scanStartedIncremental": "已开始增量扫描",
+  "scanTriggerFailed": "触发失败：{error}",
+  "@scanTriggerFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanRootAdded": "已添加目录",
+  "scanRootAddFailed": "添加失败：{error}",
+  "@scanRootAddFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanRootRemoved": "已移除目录",
+  "scanRootRemoveFailed": "移除失败：{error}",
+  "@scanRootRemoveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "devicesTitle": "输出设备",
+  "rescan": "重新扫描",
+  "availableDevices": "可用设备",
+  "deviceLocal": "本机",
+  "clientAudioOut": "客户端音频输出",
+  "scanFailed": "扫描失败：{error}",
+  "@scanFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noDlnaRenderers": "未发现 DLNA 渲染器",
+  "outputParams": "输出参数",
+  "deviceLabel": "设备",
+  "sampleRatePolicy": "采样率策略",
+  "followSource": "跟随源",
+  "dsdPassThrough": "DSD 原样送接收端",
+  "dsdExtractPoint": "DSD 抽取落点",
+  "eqFade": "EQ / 淡入淡出",
+  "bypass": "旁路",
+  "nowPlayingLabel": "正在播放：{song}",
+  "@nowPlayingLabel": {
+    "placeholders": {
+      "song": {
+        "type": "String"
+      }
+    }
+  },
+  "selectSongFirst": "请先选择一首歌曲",
+  "castSuccess": "已投屏到 {name}",
+  "@castSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "castFailed": "投屏失败：{error}",
+  "@castFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backToLocal": "已切回本机播放",
+  "loginSubtitle": "飞牛 NAS 私有化 HIFI 流媒体",
+  "serverAddress": "服务器地址",
+  "restoreDefault": "恢复默认地址",
+  "username": "用户名",
+  "password": "密码",
+  "login": "登录",
+  "serverUrlEmpty": "地址不能为空",
+  "serverUrlScheme": "地址必须以 http:// 或 https:// 开头",
+  "serverUrlHost": "地址缺少主机名或 IP",
+  "serverInvalid": "服务器地址有误：{error}",
+  "@serverInvalid": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loginFailed": "登录失败：{error}",
+  "@loginFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "qualityTierTitle": "音质档位",
+  "qualityLossless": "无损 · 跟随源",
+  "qualityCd": "无损 · 16 bit",
+  "qualityHd": "无损 · 24 bit",
+  "playNext": "下一首播放",
+  "addedToPlayNext": "已加入下一首播放",
+  "addToPlaylist": "添加到歌单",
+  "unfavorite": "取消收藏",
+  "favorite": "收藏",
+  "opFailed": "操作失败：{error}",
+  "@opFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "lyricsEdit": "歌词查看 / 编辑",
+  "scrapeMetadata": "联网刮削元数据",
+  "scrapeDone": "刮削完成：歌词 {lyrics} 封面 {cover}",
+  "@scrapeDone": {
+    "placeholders": {
+      "lyrics": {
+        "type": "String"
+      },
+      "cover": {
+        "type": "String"
+      }
+    }
+  },
+  "noOnlineMatch": "未找到在线匹配结果",
+  "scrapeFailed": "刮削失败：{error}",
+  "@scrapeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "addedToPlaylist": "已加入歌单",
+  "addToPlaylistFailed": "加入失败：{error}",
+  "@addToPlaylistFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseDevice": "选择播放设备",
+  "localPlayback": "本机播放",
+  "dlnaRenderer": "DLNA 渲染器",
+  "castedTo": "已投屏：{name}",
+  "@castedTo": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "signalPathTitle": "信号路径",
+  "notPlaying": "未在播放",
+  "rgNotEnabled": "未启用",
+  "rgMissingTag": "该文件缺少标签，未调整",
+  "rgLinearGain": "线性增益 {gain}x",
+  "@rgLinearGain": {
+    "placeholders": {
+      "gain": {
+        "type": "String"
+      }
+    }
+  },
+  "rgPeakCap": "峰值封顶防削波",
+  "dlnaPush": "DLNA 推送",
+  "rendererFallback": "渲染器",
+  "flacFollowSource": "FLAC 跟随源",
+  "httpStream": "HTTP 音频流（服务端整段处理）",
+  "outParams": "{label} · 48kHz 立体声",
+  "@outParams": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "httpDirect": "HTTP 直出（原始文件）",
+  "httpDirectSub": "字节流 Range 寻址 · 服务端不处理",
+  "sourceFile": "源文件",
+  "decodeToPcm": "解码 {codec} → PCM",
+  "@decodeToPcm": {
+    "placeholders": {
+      "codec": {
+        "type": "String"
+      }
+    }
+  },
+  "symphoniaDecode": "symphonia 服务端解码",
+  "resampleMix": "重采样 / 混音",
+  "resampleTarget": "{source} → 48kHz · 立体声",
+  "@resampleTarget": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "resamplePassthrough": "直通，保持原始格式",
+  "presetWithName": "音效预设 · {name}",
+  "@presetWithName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "camillaDsp": "camilladsp DSP 链路处理",
+  "presetIdle": "未启用 · 原声直通",
+  "volumeMuted": "音量 · 已静音",
+  "volumePercent": "音量 {percent}%",
+  "@volumePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "clientVolume": "客户端本地音量",
+  "dlnaRendererOutput": "DLNA 渲染器输出",
+  "lyricsLoadFailed": "歌词加载失败",
+  "noLyrics": "暂无歌词",
+  "noLyricsHint": "可在 Web 端编辑或上传 LRC 文件",
+  "levelMeter": "电平",
+  "relatedTitle": "相关",
+  "relatedArtists": "相关艺人",
+  "noSameArtist": "曲库里暂无同艺人作品",
+  "relatedAlbums": "相关专辑",
+  "noSameAlbum": "曲库里暂无同专辑作品",
+  "youMayLike": "你可能也喜欢",
+  "noRecommendations": "暂无推荐",
+  "lyrics": "歌词",
+  "lyricsWithTitle": "歌词 · {title}",
+  "@lyricsWithTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadLrc": "上传 LRC",
+  "lyricsSaved": "歌词已保存（来源：手动编辑）",
+  "uploadSuccess": "上传成功：{name}",
+  "@uploadSuccess": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "uploadFailed": "上传失败：{error}",
+  "@uploadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "lyricsEmptyHint": "暂无歌词，可点击「编辑」或「上传 LRC」",
+  "lyricsPlaceholder": "[00:00.00]第一行歌词\n[00:03.00]第二行歌词",
+  "lyricSourceUser": "手动编辑",
+  "lyricSourceEmbedded": "音频内嵌",
+  "lyricSourceFile": "LRC 文件",
+  "lyricSourceNetwork": "网络刮削",
+  "lyricSourceNone": "无歌词",
+  "rgAnalyzeDone": "分析完成：实测 {measured} · 跳过 {skipped} · 失败 {failed}",
+  "@rgAnalyzeDone": {
+    "placeholders": {
+      "measured": {
+        "type": "int"
+      },
+      "skipped": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "rgAnalyzeFailed": "分析失败：{error}",
+  "@rgAnalyzeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "rgMeasureHeader": "实测口径",
+  "rgKWeighting": "K 计权 + 400ms / 100ms 分块 + 双重门限",
+  "rgTruePeak": "真峰值（附录 2）参与防削波",
+  "rgImplemented": "已实现",
+  "rgByChannelLayout": "按源声道布局测量",
+  "rgCorrect": "正确",
+  "rgAlbumGainWeighted": "专辑增益按时长加权能量合成",
+  "rgAnalyzeMissing": "分析缺失曲目",
+  "rgReanalyzeAll": "全部重新分析",
+  "rgStatusLoadFailed": "状态加载失败：{error}",
+  "@rgStatusLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "rgRefLevel": "参考电平 LUFS",
+  "rgAnalyzedCount": "首已实测",
+  "rgPendingCount": "首待分析",
+  "rgTaggedCount": "标签曲目",
+  "libTabSongs": "歌曲",
+  "libTabAlbums": "专辑",
+  "libTabArtists": "歌手",
+  "libTabGenres": "风格",
+  "albumsTitle": "专辑",
+  "artistsTitle": "歌手",
+  "genresTitle": "风格",
+  "noAlbums": "暂无专辑",
+  "noArtists": "暂无歌手",
+  "noGenres": "暂无风格",
+  "unknownArtist": "未知艺术家",
+  "unknownYear": "未知年份",
+  "unknownGenre": "未知风格",
+  "followArtist": "关注",
+  "followingArtist": "已关注",
+  "followFailed": "操作失败：{error}",
+  "@followFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "itemCount": "{count} 个",
+  "@itemCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "albumCount": "{count} 张专辑",
+  "@albumCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "followedArtists": "关注歌手",
+  "dailyRecommendations": "每日推荐",
+  "refreshRecommendations": "换一批",
+  "recommendationEmpty": "暂无推荐，先去收藏或播放一些歌曲",
+  "roamTitle": "漫游",
+  "roamSimilar": "相似漫游",
+  "roamTaste": "口味漫游",
+  "roamRandom": "随机漫游",
+  "roamStop": "结束漫游",
+  "roamHint": "按相似、口味或随机持续播放，播到队尾自动续接",
+  "setPlaylistCover": "设为封面",
+  "moveUp": "上移",
+  "moveDown": "下移"
+}

@@ -1,0 +1,80 @@
+name: fn_audio
+description: FN Audio 私有化 HIFI 流媒体移动端
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # 多语言：SDK 自带本地化代理，intl 负责日期/数字格式与 ARB 生成。
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  # iOS 风格图标字体：CupertinoIcons 依赖该包提供字形，缺失会渲染成方框。
+  cupertino_icons: ^1.0.8
+  dio: ^5.7.0
+  flutter_riverpod: ^2.6.1
+  riverpod_annotation: ^2.6.1
+  go_router: ^14.6.2
+  just_audio: ^0.9.42
+  # iOS 音频会话类别（music）：just_audio 只负责激活会话，类别需自行配置，
+  # 否则静音开关会静音、且无法后台播放。
+  audio_session: ^0.1.24
+  shared_preferences: ^2.3.3
+  web_socket_channel: ^3.0.1
+  just_audio_windows: ^0.2.3
+  file_selector: ^1.0.3
+  smtc_windows: ^1.1.0
+  # 必须与 smtc_windows 的 codegen 版本一致，否则运行时初始化会报版本不匹配。
+  flutter_rust_bridge: 2.11.1
+  audio_service: 0.18.19
+  # 本地音频引擎：Rust（symphonia + libopus + cpal + rubato）全格式解码与
+  # 本地 DSP（PEQ/GEQ、交叉馈送、淡入淡出、ReplayGain）。默认关闭，
+  # 设置页「本地音频引擎」手动开启；不可用时逐曲回退 just_audio。
+  fn_audio_engine:
+    path: packages/fn_audio_engine
+
+# 锁版本：
+# - path_provider_android 2.3.x 改用 jni_flutter 新 JNI 架构，其生成代码引用的
+#   JString/JObject/JType 类型在当前 Flutter 3.41.6 的引擎绑定中未导出，Windows
+#   构建（flutter_assemble 编译 Dart kernel）阶段报 Undefined name 'JString' 等
+#   错误导致 build 失败。2.2.23 为纯 pigeon 实现、无 JNI 依赖，回退到此版本。
+# - path_provider_windows 2.3.0 本地缓存残缺（缺 lib/path_provider_windows.dart），
+#   shared_preferences_windows import 时报"系统找不到指定路径"；2.2.1 缓存完整
+#   且满足 ^2.0.0 约束，一并锁定。
+dependency_overrides:
+  path_provider_android: 2.2.23
+  path_provider_windows: 2.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter:
+  uses-material-design: true
+  # 由 l10n.yaml + lib/l10n/*.arb 生成 AppLocalizations。
+  generate: true
+
+# 应用图标：Android 侧由 assets/icon 下的源图派生，一条命令重新生成：
+#   cd app && dart run flutter_launcher_icons
+# 源图不写进 flutter.assets，因此只作为生成输入，不会被打进 App 包体。
+# Windows 侧置 false 的原因：flutter_launcher_icons 只会把源图压成"单一尺寸"的 .ico
+# （见其 windows_icon_generator.dart 仅按 icon_size 写一个条目），而 Runner.rc 引用的
+# resources/app_icon.ico 需要 16~256 全尺寸，否则标题栏 16px 只能由 256px 缩放、发糊。
+# 该 .ico 与 assets/icon/app_icon.png 同源（同一张 1024 源图派生），随源图一起提交。
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  # Android 传统 mipmap：圆角渐变标（会生成 48~192px 五档）
+  image_path: "assets/icon/app_icon.png"
+  # Android 8+ 自适应图标：纯红底 + 居中白色音波（音波已按 66dp 安全圈内缩）
+  adaptive_icon_background: "#FA2D48"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  windows:
+    generate: false

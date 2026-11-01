@@ -1,0 +1,61 @@
+[package]
+name = "fn_audio_engine"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "fn_audio_engine"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+# 桥接层：版本必须与 App 的 flutter_rust_bridge 2.11.1 完全一致
+flutter_rust_bridge = "=2.11.1"
+
+# 解码：与服务端同版本，保留原生采样率/位深
+symphonia = { version = "0.6", features = ["all"] }
+
+# 无损/有损全格式：Opus（symphonia 0.6 不含 Opus 解码器）
+symphonia-adapter-libopus = "0.3"
+# 该 adapter 自身把 opusic-sys 设为 default-features=false，这里显式打开
+# bundled，才能从 vendored 源码静态编译 libopus（Android 需 ANDROID_NDK_HOME）。
+opusic-sys = { version = "0.7", features = ["bundled"] }
+
+# 重采样（设备采样率与源不一致时）
+rubato = "5"
+
+# 输出：cpal（Windows 默认输出；Android/iOS 走 AAudio/AVAudioSession）
+cpal = "0.18"
+
+# 原始文件拉流（HTTP Range）
+ureq = "2"
+
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+anyhow = "1"
+# DSP 预设解析时对未知滤波器/阶段发 warn（与后端同一条日志口径）
+tracing = "0.1"
+
+# Android：cpal 的 AAudio 后端通过 ndk_context + JNI 查询系统属性，
+# 这些引用由 Kotlin MainActivity 在启动时注册（见 src/android_jni.rs）。
+[target.'cfg(target_os = "android")'.dependencies]
+ndk-context = "0.1"
+jni-sys = "0.3"
+
+# iOS：cpal 的 RemoteIO 后端只监听打断/路由变化，不会主动激活 AVAudioSession，
+# 会话未激活时音频单元渲染不出声，需要引擎在开流/恢复播放前自己激活。
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2-avf-audio = { version = "0.3", default-features = false, features = ["std", "AVAudioSession", "AVAudioSessionTypes"] }
+
+# cpal 0.18.2 在 AAudio 开流后会通过 JNI 读 `aaudio.mixer_bursts`，这条路径要求
+# ndk_context 里的 JavaVM 指针同时满足 jni 0.22 与 ART `GetEnv` 两套冲突的约定，
+# 实测必然 SIGSEGV。third_party/cpal 只改了 `get_mixer_bursts()` 直接返回 Err，
+# 让 cpal 走 `frames_per_burst()` 回退（纯 AAudio，不碰 JNI），其余代码与
+# crates.io 上的 0.18.2 一致。
+[patch.crates-io]
+cpal = { path = "third_party/cpal" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"

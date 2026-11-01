@@ -1,0 +1,247 @@
+# iOS 打包流水线：默认产出「未签名 IPA」（Payload/Runner.app，可用 Sideloadly / esign 重签），
+# 配置好签名 secrets 后自动产出已签名的 IPA。
+#
+# 逻辑与 DEPLOY.md「1.3 构建 Flutter 移动端」保持一致：
+#   - Flutter 3.41.6、最低 iOS 13.0、bundle id com.fnaudio.fnAudio
+#   - 本地 Rust 引擎（fn_audio_engine）由 cargokit 在 pod 构建阶段编译成静态库，
+#     因此先装 Rust 的 iOS 目标再 pod install
+#
+# 签名相关 secrets（全部配置后才走签名打包，否则只产未签名包）：
+#   IOS_CERTIFICATE_P12        分发证书 .p12 的 base64（openssl base64 -A 单行）
+#   IOS_CERTIFICATE_PASSWORD   .p12 密码
+#   IOS_PROVISIONING_PROFILE   mobileprovision 的 base64
+#   IOS_TEAM_ID                Apple Developer Team ID
+#   IOS_KEYCHAIN_PASSWORD      可选，临时钥匙串密码（默认 fn-audio-ci）
+# 可选仓库变量（Variables）：
+#   IOS_RUNNER                 自建 macOS runner 的标签，如 self-hosted / macos
+#   FN_AUDIO_BASE              编译期默认 API 地址
+#
+# 手动触发时可填 runner 标签覆盖默认的 macos-latest 托管机。
+
+name: iOS 打包
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: '编译期默认 API 地址（留空则用 App 内默认/平台默认）'
+        required: false
+        default: ''
+        type: string
+      export_method:
+        description: 'IPA 导出方式（仅在配置了签名 secrets 时生效）'
+        required: false
+        default: app-store
+        type: choice
+        options:
+          - app-store
+          - ad-hoc
+          - development
+          - enterprise
+      runner:
+        description: 'Runner 标签（自建 macOS runner 填其标签，留空用托管 macos-latest）'
+        required: false
+        default: ''
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    runs-on: ${{ inputs.runner || vars.IOS_RUNNER || 'macos-latest' }}
+    timeout-minutes: 90
+    env:
+      FLUTTER_VERSION: '3.41.6'
+      BASE_URL: ${{ inputs.base_url || vars.FN_AUDIO_BASE }}
+      EXPORT_METHOD: ${{ inputs.export_method || 'app-store' }}
+      # 四个签名要素齐全才走签名打包；secrets 无法直接用于 if，先落到 env。
+      HAS_SIGNING: ${{ secrets.IOS_CERTIFICATE_P12 != '' && secrets.IOS_CERTIFICATE_PASSWORD != '' && secrets.IOS_PROVISIONING_PROFILE != '' && secrets.IOS_TEAM_ID != '' }}
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 打印构建环境
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: 安装 Rust 及 iOS 目标
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      # cargokit 把 Rust 产物编进 Xcode 的临时目录，目标目录缓存不了；
+      # 这里只缓存 registry，避免每跑一次都重新拉依赖。
+      - name: 缓存 Cargo 依赖
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/packages/fn_audio_engine/rust
+          cache-targets: false
+          cache-on-failure: true
+
+      - name: 安装 Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: 准备 CocoaPods
+        run: |
+          if ! command -v pod >/dev/null 2>&1; then
+            brew install cocoapods
+          fi
+          pod --version
+
+      - name: 拉取依赖并安装 Pods
+        working-directory: app
+        run: |
+          flutter pub get
+          cd ios && pod install
+
+      - name: 导入签名证书与描述文件
+        if: env.HAS_SIGNING == 'true'
+        env:
+          CERT_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          CERT_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD || 'fn-audio-ci' }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          CERT_PATH="$RUNNER_TEMP/cert.p12"
+          PROFILE_PATH="$RUNNER_TEMP/profile.mobileprovision"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "$CERT_P12" | base64 --decode > "$CERT_PATH"
+          security import "$CERT_PATH" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH" $(security list-keychain -d user | tr -d '"')
+
+          echo "$PROFILE" | base64 --decode > "$PROFILE_PATH"
+          # 手动签名用描述文件 UUID 作为 PROVISIONING_PROFILE_SPECIFIER，避免依赖名称字符串。
+          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin)
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          {
+            echo "TEAM_ID=$TEAM_ID"
+            echo "PROFILE_SPECIFIER=$PROFILE_UUID"
+          } >> "$GITHUB_ENV"
+          rm -f "$CERT_PATH"
+
+      - name: 构建未签名 IPA
+        if: env.HAS_SIGNING != 'true'
+        working-directory: app
+        run: |
+          set -euo pipefail
+          DEFINES=()
+          if [ -n "$BASE_URL" ]; then DEFINES+=(--dart-define=FN_AUDIO_BASE="$BASE_URL"); fi
+          flutter build ios --release --no-codesign "${DEFINES[@]}"
+          # 未签名 IPA 的标准结构是 zip 里只放 Payload/Runner.app，重签工具直接读这个包。
+          rm -rf "$RUNNER_TEMP/Payload"
+          mkdir -p "$RUNNER_TEMP/Payload"
+          cp -R build/ios/iphoneos/Runner.app "$RUNNER_TEMP/Payload/"
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$RUNNER_TEMP/Payload" "$RUNNER_TEMP/FN-Audio-unsigned.ipa"
+
+      - name: 归档并导出 IPA（签名）
+        if: env.HAS_SIGNING == 'true'
+        working-directory: app
+        run: |
+          set -euo pipefail
+          case "$EXPORT_METHOD" in
+            app-store|ad-hoc|development|enterprise) ;;
+            *) echo "未知导出方式: $EXPORT_METHOD" >&2; exit 1 ;;
+          esac
+
+          # 手写 DART_DEFINES：直接走 xcodebuild 归档时不会经过 flutter build 的参数解析。
+          if [ -n "$BASE_URL" ]; then
+            export DART_DEFINES=$(printf '%s' "FN_AUDIO_BASE=$BASE_URL" | base64)
+          fi
+
+          cd ios
+          # 手动签名：工程未配置 DEVELOPMENT_TEAM，托管机也没有自动签名所需的登录态。
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/Runner.xcarchive \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_SPECIFIER" \
+            archive
+
+          BUNDLE_ID=$(xcodebuild -workspace Runner.xcworkspace -scheme Runner \
+            -configuration Release -sdk iphoneos -showBuildSettings 2>/dev/null \
+            | awk -F' = ' '/PRODUCT_BUNDLE_IDENTIFIER/ {print $2; exit}')
+          BUNDLE_ID=${BUNDLE_ID:-com.fnaudio.fnAudio}
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>${EXPORT_METHOD}</string>
+            <key>teamID</key>
+            <string>${TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>${BUNDLE_ID}</key>
+              <string>${PROFILE_SPECIFIER}</string>
+            </dict>
+            <key>stripSwiftSymbols</key>
+            <true/>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath build/Runner.xcarchive \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath build/ipa
+
+      - name: 上传未签名 IPA
+        if: env.HAS_SIGNING != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fn-audio-ios-unsigned
+          path: ${{ runner.temp }}/FN-Audio-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: 上传 IPA
+        if: env.HAS_SIGNING == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: fn-audio-ios-ipa
+          path: app/ios/build/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: 清理签名材料
+        if: always() && env.HAS_SIGNING == 'true'
+        run: |
+          security delete-keychain "$RUNNER_TEMP/app-signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/profile.mobileprovision" "$RUNNER_TEMP/ExportOptions.plist"
