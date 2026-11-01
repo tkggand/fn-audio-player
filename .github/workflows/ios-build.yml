@@ -15,6 +15,7 @@
 # 可选仓库变量（Variables）：
 #   IOS_RUNNER                 自建 macOS runner 的标签，如 self-hosted / macos
 #   FN_AUDIO_BASE              编译期默认 API 地址
+#   IOS_CODE_SIGN_IDENTITY     证书签名主体名（默认 Apple Distribution）
 #
 # 手动触发时可填 runner 标签覆盖默认的 macos-latest 托管机。
 
@@ -29,12 +30,12 @@ on:
         default: ''
         type: string
       export_method:
-        description: 'IPA 导出方式（仅在配置了签名 secrets 时生效）'
+        description: 'IPA 导出方式（仅在配置了签名 secrets 时生效；app-store-connect 对应 Xcode 15.3+）'
         required: false
-        default: app-store
+        default: app-store-connect
         type: choice
         options:
-          - app-store
+          - app-store-connect
           - ad-hoc
           - development
           - enterprise
@@ -47,6 +48,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: read
+
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
@@ -58,7 +62,9 @@ jobs:
     env:
       FLUTTER_VERSION: '3.41.6'
       BASE_URL: ${{ inputs.base_url || vars.FN_AUDIO_BASE }}
-      EXPORT_METHOD: ${{ inputs.export_method || 'app-store' }}
+      EXPORT_METHOD: ${{ inputs.export_method || 'app-store-connect' }}
+      # 证书的签名主体名；默认 Apple Distribution，老证书可在仓库变量里覆盖。
+      SIGN_IDENTITY: ${{ vars.IOS_CODE_SIGN_IDENTITY || 'Apple Distribution' }}
       # 四个签名要素齐全才走签名打包；secrets 无法直接用于 if，先落到 env。
       HAS_SIGNING: ${{ secrets.IOS_CERTIFICATE_P12 != '' && secrets.IOS_CERTIFICATE_PASSWORD != '' && secrets.IOS_PROVISIONING_PROFILE != '' && secrets.IOS_TEAM_ID != '' }}
     steps:
@@ -129,7 +135,9 @@ jobs:
 
           echo "$PROFILE" | base64 --decode > "$PROFILE_PATH"
           # 手动签名用描述文件 UUID 作为 PROVISIONING_PROFILE_SPECIFIER，避免依赖名称字符串。
-          PROFILE_UUID=$(security cms -D -i "$PROFILE_PATH" | /usr/libexec/PlistBuddy -c 'Print UUID' /dev/stdin)
+          security cms -D -i "$PROFILE_PATH" > "$RUNNER_TEMP/profile.plist"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")
+          rm -f "$RUNNER_TEMP/profile.plist"
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
 
@@ -144,9 +152,11 @@ jobs:
         working-directory: app
         run: |
           set -euo pipefail
-          DEFINES=()
-          if [ -n "$BASE_URL" ]; then DEFINES+=(--dart-define=FN_AUDIO_BASE="$BASE_URL"); fi
-          flutter build ios --release --no-codesign "${DEFINES[@]}"
+          # 用位置参数拼 dart-define：macOS 自带 bash 3.2，set -u 下展开空数组会报 unbound variable。
+          set --
+          if [ -n "$BASE_URL" ]; then set -- --dart-define=FN_AUDIO_BASE="$BASE_URL"; fi
+          flutter build ios --release --no-codesign "$@"
+          test -d build/ios/iphoneos/Runner.app
           # 未签名 IPA 的标准结构是 zip 里只放 Payload/Runner.app，重签工具直接读这个包。
           rm -rf "$RUNNER_TEMP/Payload"
           mkdir -p "$RUNNER_TEMP/Payload"
@@ -160,7 +170,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$EXPORT_METHOD" in
-            app-store|ad-hoc|development|enterprise) ;;
+            app-store|app-store-connect|ad-hoc|development|enterprise) ;;
             *) echo "未知导出方式: $EXPORT_METHOD" >&2; exit 1 ;;
           esac
 
@@ -180,7 +190,7 @@ jobs:
             -archivePath build/Runner.xcarchive \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
+            CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_SPECIFIER" \
             archive
 
@@ -201,7 +211,7 @@ jobs:
             <key>signingStyle</key>
             <string>manual</string>
             <key>signingCertificate</key>
-            <string>Apple Distribution</string>
+            <string>${SIGN_IDENTITY}</string>
             <key>provisioningProfiles</key>
             <dict>
               <key>${BUNDLE_ID}</key>
@@ -217,6 +227,7 @@ jobs:
           </plist>
           EOF
 
+          rm -rf build/ipa
           xcodebuild -exportArchive \
             -archivePath build/Runner.xcarchive \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
