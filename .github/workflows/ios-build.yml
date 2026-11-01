@@ -71,6 +71,18 @@ jobs:
       - name: 拉取代码
         uses: actions/checkout@v4
 
+      # 兼容两种仓库布局：完整仓库（app/ 子目录）与仅含 app 内容的独立仓库（根目录即 app）。
+      - name: 识别 App 目录
+        run: |
+          if [ -f app/pubspec.yaml ]; then
+            echo "APP_DIR=app" >> "$GITHUB_ENV"
+          elif [ -f pubspec.yaml ]; then
+            echo "APP_DIR=." >> "$GITHUB_ENV"
+          else
+            echo "::error::未找到 Flutter app：app/pubspec.yaml 与 pubspec.yaml 均不存在"
+            exit 1
+          fi
+
       - name: 打印构建环境
         run: |
           xcodebuild -version
@@ -86,7 +98,7 @@ jobs:
       - name: 缓存 Cargo 依赖
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: app/packages/fn_audio_engine/rust
+          workspaces: ${{ env.APP_DIR }}/packages/fn_audio_engine/rust
           cache-targets: false
           cache-on-failure: true
 
@@ -105,8 +117,9 @@ jobs:
           pod --version
 
       - name: 拉取依赖并安装 Pods
-        working-directory: app
         run: |
+          set -euo pipefail
+          cd "$APP_DIR"
           flutter pub get
           cd ios && pod install
 
@@ -149,9 +162,9 @@ jobs:
 
       - name: 构建未签名 IPA
         if: env.HAS_SIGNING != 'true'
-        working-directory: app
         run: |
           set -euo pipefail
+          cd "$APP_DIR"
           # 用位置参数拼 dart-define：macOS 自带 bash 3.2，set -u 下展开空数组会报 unbound variable。
           set --
           if [ -n "$BASE_URL" ]; then set -- --dart-define=FN_AUDIO_BASE="$BASE_URL"; fi
@@ -166,9 +179,9 @@ jobs:
 
       - name: 归档并导出 IPA（签名）
         if: env.HAS_SIGNING == 'true'
-        working-directory: app
         run: |
           set -euo pipefail
+          cd "$APP_DIR"
           case "$EXPORT_METHOD" in
             app-store|app-store-connect|ad-hoc|development|enterprise) ;;
             *) echo "未知导出方式: $EXPORT_METHOD" >&2; exit 1 ;;
@@ -247,7 +260,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: fn-audio-ios-ipa
-          path: app/ios/build/ipa/*.ipa
+          path: ${{ env.APP_DIR }}/ios/build/ipa/*.ipa
           if-no-files-found: error
           retention-days: 14
 
