@@ -27,10 +27,18 @@ enum _Sort { title, artist, album, duration, format }
 
 class _LibraryPageState extends State<LibraryPage>
     with FnThemeAware<LibraryPage> {
-  static const _tabs = ['songs', 'albums', 'artists', 'genres', 'favorites', 'playlists'];
+  static const _tabs = [
+    'songs',
+    'albums',
+    'artists',
+    'genres',
+    'favorites',
+    'playlists'
+  ];
   static const _tabLabels = ['歌曲', '专辑', '艺人', '流派', '收藏', '歌单'];
 
-  late String _tab = _tabs.contains(widget.initialTab) ? widget.initialTab : 'songs';
+  late String _tab =
+      _tabs.contains(widget.initialTab) ? widget.initialTab : 'songs';
   bool _loading = true;
   String? _error;
 
@@ -130,11 +138,13 @@ class _LibraryPageState extends State<LibraryPage>
   bool _matchSong(Song s) =>
       _matchText('${s.title} ${s.artist} ${s.album} ${s.genre ?? ''}');
 
-  List<AggregateItem> get _visibleAlbums =>
-      _albums.where((a) => _matchText('${a.name} ${a.subtitle ?? ''}')).toList();
+  List<AggregateItem> get _visibleAlbums => _albums
+      .where((a) => _matchText('${a.name} ${a.subtitle ?? ''}'))
+      .toList();
 
-  List<AggregateItem> get _visibleArtists =>
-      _artists.where((a) => _matchText('${a.name} ${a.subtitle ?? ''}')).toList();
+  List<AggregateItem> get _visibleArtists => _artists
+      .where((a) => _matchText('${a.name} ${a.subtitle ?? ''}'))
+      .toList();
 
   List<GenreInfo> get _visibleGenres =>
       _genres.where((g) => _matchText(g.name)).toList();
@@ -160,8 +170,9 @@ class _LibraryPageState extends State<LibraryPage>
               prefixIcon: const Icon(Icons.search_rounded, size: 18),
               filled: true,
               fillColor: FnColors.glassLight,
+              // 与登录 / 搜索页表单一致：圆角小一档，不再用胶囊形。
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(999),
+                borderRadius: const BorderRadius.all(Radius.circular(10)),
                 borderSide: BorderSide(color: FnColors.line),
               ),
             ),
@@ -192,15 +203,12 @@ class _LibraryPageState extends State<LibraryPage>
   List<Song> _sorted(List<Song> src) {
     final list = [...src];
     int cmp(Song a, Song b) => switch (_sort) {
-          _Sort.title =>
-            a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+          _Sort.title => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
           _Sort.artist =>
             a.artist.toLowerCase().compareTo(b.artist.toLowerCase()),
-          _Sort.album =>
-            a.album.toLowerCase().compareTo(b.album.toLowerCase()),
+          _Sort.album => a.album.toLowerCase().compareTo(b.album.toLowerCase()),
           _Sort.duration => (a.duration ?? 0).compareTo(b.duration ?? 0),
-          _Sort.format =>
-            fnFormatOf(a).label.compareTo(fnFormatOf(b).label),
+          _Sort.format => fnFormatOf(a).label.compareTo(fnFormatOf(b).label),
         };
     list.sort((a, b) {
       final r = cmp(a, b);
@@ -258,7 +266,8 @@ class _LibraryPageState extends State<LibraryPage>
   void _shuffleAll(List<Song> list) {
     if (list.isEmpty) return;
     final pool = [...list]..shuffle();
-    if (!PlayerController.instance.shuffle) PlayerController.instance.toggleShuffle();
+    if (!PlayerController.instance.shuffle)
+      PlayerController.instance.toggleShuffle();
     PlayerController.instance.playList(pool, 0);
     fnToast(context, '随机播放已开启', icon: Icons.shuffle_rounded);
   }
@@ -296,8 +305,7 @@ class _LibraryPageState extends State<LibraryPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('取消',
-                style: TextStyle(color: FnColors.textSecondary)),
+            child: Text('取消', style: TextStyle(color: FnColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
@@ -415,9 +423,11 @@ class _LibraryPageState extends State<LibraryPage>
                   '${_songs.length} 首歌 · ${_artists.length} 位艺人 · ${_albums.length} 张专辑',
               actions: [
                 if (!bp.isMobile)
-                  _LibSearchField(controller: _searchCtrl, onChanged: (v) {
-                    setState(() => _query = v.trim());
-                  }),
+                  _LibSearchField(
+                      controller: _searchCtrl,
+                      onChanged: (v) {
+                        setState(() => _query = v.trim());
+                      }),
                 if (bp.isMobile) ...[
                   FnIconBtn(
                     icon: Icons.more_vert_rounded,
@@ -451,7 +461,8 @@ class _LibraryPageState extends State<LibraryPage>
                 const SizedBox(height: 14),
                 ..._panel(),
                 FnPageFoot(
-                  left: '${_songs.length} 首 · ${_favs.length} 收藏 · ${_playlists.length} 歌单',
+                  left:
+                      '${_songs.length} 首 · ${_favs.length} 收藏 · ${_playlists.length} 歌单',
                   right: '扫描设置',
                   onRight: () => context.push('/scan'),
                 ),
@@ -553,6 +564,29 @@ class _LibraryPageState extends State<LibraryPage>
       'duration': '时长',
       'format': '格式',
     };
+    final bp = fnBpOf(context);
+    // 工具栏内统一用 FnButton(sm)，保证播放、排序、筛选三种按钮高度与内边距一致。
+    FnButton filter(String label, String value) => FnButton(
+          label: label,
+          size: FnButtonSize.sm,
+          variant:
+              _filter == value ? FnButtonVariant.primary : FnButtonVariant.soft,
+          onTap: () => setState(() => _filter = value),
+        );
+    final filters = [
+      filter('全部', 'all'),
+      filter('无损以上', 'lossless'),
+      filter('已收藏', 'favorites'),
+    ];
+    final sortPill = bp == FnBp.desktop
+        ? null
+        : FnButton(
+            label: sorts[_sort.name]!,
+            icon: Icons.sort_rounded,
+            variant: FnButtonVariant.soft,
+            size: FnButtonSize.sm,
+            onTap: _sortSheet,
+          );
     return Column(
       children: [
         Padding(
@@ -574,63 +608,24 @@ class _LibraryPageState extends State<LibraryPage>
                 size: FnButtonSize.sm,
               ),
               const Spacer(),
-              if (fnBpOf(context) != FnBp.desktop)
-                GestureDetector(
-                  onTap: _sortSheet,
-                  child: Container(
-                    height: 34,
-                    padding: const EdgeInsets.symmetric(horizontal: 11),
-                    decoration: BoxDecoration(
-                      color: FnColors.glassLight,
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: FnColors.line),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.sort_rounded,
-                            size: 15, color: FnColors.textSecondary),
-                        const SizedBox(width: 5),
-                        Text(
-                          sorts[_sort.name]!,
-                          style: TextStyle(
-                              fontSize: 11.5, color: FnColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              // 筛选标记与「播放全部」同一水平线、靠最右；窄屏放不下时仍单独成行。
+              if (sortPill != null) ...[sortPill, const SizedBox(width: 8)],
+              if (bp != FnBp.mobile)
+                for (final c in filters) ...[c, const SizedBox(width: 8)],
             ],
           ),
         ),
-        SizedBox(
-          height: 34,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: kFnPad),
-            children: [
-              FnChip(
-                label: '全部',
-                selected: _filter == 'all',
-                onTap: () => setState(() => _filter = 'all'),
-                small: true,
-              ),
-              const SizedBox(width: 7),
-              FnChip(
-                label: '无损以上',
-                selected: _filter == 'lossless',
-                onTap: () => setState(() => _filter = 'lossless'),
-                small: true,
-              ),
-              const SizedBox(width: 7),
-              FnChip(
-                label: '已收藏',
-                selected: _filter == 'favorites',
-                onTap: () => setState(() => _filter = 'favorites'),
-                small: true,
-              ),
-            ],
+        if (bp == FnBp.mobile)
+          SizedBox(
+            height: 34,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: kFnPad),
+              children: [
+                for (final c in filters) ...[c, const SizedBox(width: 8)],
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 4),
       ],
     );
@@ -643,9 +638,7 @@ class _LibraryPageState extends State<LibraryPage>
         FnEmpty(
           icon: CupertinoIcons.square_stack,
           title: _albums.isEmpty ? '还没有专辑' : '没有匹配的专辑',
-          message: _albums.isEmpty
-              ? '完成一次曲库扫描后，专辑会自动归类。'
-              : '换一个关键词试试。',
+          message: _albums.isEmpty ? '完成一次曲库扫描后，专辑会自动归类。' : '换一个关键词试试。',
           compact: true,
         )
       else
@@ -686,9 +679,7 @@ class _LibraryPageState extends State<LibraryPage>
         FnEmpty(
           icon: CupertinoIcons.person_2,
           title: _artists.isEmpty ? '还没有艺人信息' : '没有匹配的艺人',
-          message: _artists.isEmpty
-              ? '扫描完成后，这里会按艺人聚合你的曲库。'
-              : '换一个关键词试试。',
+          message: _artists.isEmpty ? '扫描完成后，这里会按艺人聚合你的曲库。' : '换一个关键词试试。',
           compact: true,
         )
       else
@@ -702,8 +693,8 @@ class _LibraryPageState extends State<LibraryPage>
                   count: a.songCount,
                   sub: a.subtitle,
                   followed: follows.contains(a.name),
-                  onTap: () => context
-                      .push('/artist/${Uri.encodeComponent(a.name)}'),
+                  onTap: () =>
+                      context.push('/artist/${Uri.encodeComponent(a.name)}'),
                   onFollow: () => _toggleFollow(a.name),
                 ),
             ],
@@ -719,9 +710,7 @@ class _LibraryPageState extends State<LibraryPage>
         FnEmpty(
           icon: CupertinoIcons.waveform,
           title: _genres.isEmpty ? '还没有流派标签' : '没有匹配的流派',
-          message: _genres.isEmpty
-              ? '歌曲带有的风格标签会聚合成这里的分类。'
-              : '换一个关键词试试。',
+          message: _genres.isEmpty ? '歌曲带有的风格标签会聚合成这里的分类。' : '换一个关键词试试。',
           compact: true,
         )
       else
@@ -846,8 +835,8 @@ class _LibraryPageState extends State<LibraryPage>
                       color: FnColors.limeSoft,
                       borderRadius: BorderRadius.circular(9),
                     ),
-                    child:
-                        Icon(Icons.add_rounded, size: 18, color: FnColors.limeText),
+                    child: Icon(Icons.add_rounded,
+                        size: 18, color: FnColors.limeText),
                   ),
                   const SizedBox(width: 12),
                   const Text('新建歌单',
@@ -889,44 +878,94 @@ class _LibraryPageState extends State<LibraryPage>
 }
 
 /// 页头过滤框（design/v3 css/pages/library.css `.lib-filter`：240 × 38）。
-class _LibSearchField extends StatelessWidget {
+class _LibSearchField extends StatefulWidget {
   const _LibSearchField({required this.controller, required this.onChanged});
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
 
   @override
+  State<_LibSearchField> createState() => _LibSearchFieldState();
+}
+
+class _LibSearchFieldState extends State<_LibSearchField> {
+  /// 与登录 / 搜索页表单一致：圆角小一档，图标与操作都嵌在框内。
+  static const _radius = BorderRadius.all(Radius.circular(10));
+
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _hasText = widget.controller.text.isNotEmpty;
+    widget.controller.addListener(_syncText);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_syncText);
+    super.dispose();
+  }
+
+  void _syncText() {
+    final has = widget.controller.text.isNotEmpty;
+    if (has != _hasText) setState(() => _hasText = has);
+  }
+
+  void _clear() {
+    widget.controller.clear();
+    widget.onChanged('');
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       width: 240,
       height: 38,
-      padding: const EdgeInsets.symmetric(horizontal: 13),
-      decoration: BoxDecoration(
-        color: FnColors.surface2,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: FnColors.line),
-      ),
-      child: Row(
-        children: [
-          Icon(CupertinoIcons.search, size: 16, color: FnColors.textTertiary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              onChanged: onChanged,
-              style: TextStyle(fontSize: 13, color: FnColors.textPrimary),
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: '过滤当前列表',
-                hintStyle: TextStyle(
-                  fontSize: 13,
-                  color: FnColors.textTertiary,
-                ),
-              ),
-            ),
+      child: TextField(
+        controller: widget.controller,
+        onChanged: widget.onChanged,
+        textAlignVertical: TextAlignVertical.center,
+        style: TextStyle(fontSize: 13, color: FnColors.textPrimary),
+        cursorColor: FnColors.lime,
+        decoration: InputDecoration(
+          isDense: true,
+          filled: true,
+          fillColor: FnColors.surface2,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
+          prefixIcon: Icon(CupertinoIcons.search,
+              size: 16, color: FnColors.textTertiary),
+          prefixIconConstraints:
+              const BoxConstraints(minWidth: 36, minHeight: 36),
+          suffixIcon: _hasText
+              ? GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: _clear,
+                  child: Tooltip(
+                    message: '清空',
+                    child: Icon(CupertinoIcons.xmark_circle_fill,
+                        size: 15, color: FnColors.textTertiary),
+                  ),
+                )
+              : null,
+          suffixIconConstraints:
+              const BoxConstraints(minWidth: 32, minHeight: 36),
+          hintText: '过滤当前列表',
+          hintStyle: TextStyle(fontSize: 13, color: FnColors.textTertiary),
+          border: const OutlineInputBorder(
+            borderRadius: _radius,
+            borderSide: BorderSide.none,
           ),
-        ],
+          enabledBorder: OutlineInputBorder(
+            borderRadius: _radius,
+            borderSide: BorderSide(color: FnColors.line),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: _radius,
+            borderSide: BorderSide(color: FnColors.lime, width: 1.2),
+          ),
+        ),
       ),
     );
   }
@@ -1078,8 +1117,8 @@ class _ArtistRow extends StatelessWidget {
                     '$count 首${sub == null || sub!.isEmpty ? '' : ' · $sub'}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11, color: FnColors.textSecondary),
+                    style:
+                        TextStyle(fontSize: 11, color: FnColors.textSecondary),
                   ),
                 ],
               ),
@@ -1108,9 +1147,8 @@ class _ArtistRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w600,
-                        color: followed
-                            ? FnColors.lime
-                            : FnColors.textSecondary,
+                        color:
+                            followed ? FnColors.lime : FnColors.textSecondary,
                       ),
                     ),
                   ],

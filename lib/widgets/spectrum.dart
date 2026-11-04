@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -8,9 +10,9 @@ import '../theme.dart';
 
 /// 播放频谱：对齐 Web 端 `Spectrum.tsx` 的 28 段柱状图。
 ///
-/// 真实频谱只来自本地音频引擎（Rust 输出回调里的 PCM）；
-/// 系统播放器（just_audio）拿不到 PCM，因此未播放或未启用本地引擎时
-/// 显示 Web 同款静止示意柱，不做任何合成动画。
+/// 真实频谱只来自本地音频引擎（Rust 输出回调里的 PCM）；系统播放器
+/// （just_audio）拿不到 PCM，此时播放中用合成律动做视觉反馈，
+/// 暂停后回到 Web 同款的静止示意柱。
 class PlaybackSpectrum extends StatefulWidget {
   const PlaybackSpectrum({
     super.key,
@@ -39,6 +41,7 @@ class _PlaybackSpectrumState extends State<PlaybackSpectrum>
 
   late final Ticker _ticker;
   List<double> _values = const [];
+  int _frame = 0;
 
   @override
   void initState() {
@@ -61,10 +64,35 @@ class _PlaybackSpectrumState extends State<PlaybackSpectrum>
   void _tick() {
     if (!mounted) return;
     final pc = PlayerController.instance;
-    final live = pc.usingLocalEngine && pc.isPlaying;
-    final next = live ? _fromEngine() : _idleValues();
+    final List<double> next;
+    if (pc.usingLocalEngine && pc.isPlaying) {
+      next = _fromEngine();
+    } else if (pc.isPlaying) {
+      // 系统播放器拿不到 PCM：降频（约 20fps）合成律动，暂停后回到静止柱。
+      _frame++;
+      if (_frame % 3 != 0) return;
+      next = _synth(_frame / 3);
+    } else {
+      _frame = 0;
+      next = _idleValues();
+    }
     if (listEquals(next, _values)) return;
     setState(() => _values = next);
+  }
+
+  /// 合成律动：每根柱由两条不同频率的正弦叠加，相位按频段与曲目 id 打散，
+  /// 避免整排柱子同步呼吸。
+  List<double> _synth(double step) {
+    final seed = PlayerController.instance.current?.id ?? 0;
+    final out = <double>[];
+    for (var i = 0; i < widget.bars; i++) {
+      final ramp = _idle[i % _idle.length] / 100.0;
+      final wave = 0.5 +
+          0.30 * math.sin(step * (2.0 + (i % 5) * 0.9) + i * 0.55 + (seed % 11) * 0.37) +
+          0.20 * math.sin(step * (1.1 + (i % 3) * 0.7) + i * 1.35 + (seed % 7) * 0.61);
+      out.add((ramp * wave * 1.35 + 0.06).clamp(0.06, 1.0).toDouble());
+    }
+    return out;
   }
 
   List<double> _fromEngine() {

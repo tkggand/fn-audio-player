@@ -19,11 +19,20 @@ class ChainNode {
   ChainNode(this.icon, this.title, this.subtitle, this.state);
 }
 
-String _formatKhz(int? hz) {
-  if (hz == null) return '?';
+String? _formatKhz(int? hz) {
+  if (hz == null || hz <= 0) return null;
   return hz % 1000 == 0
       ? '${hz ~/ 1000}kHz'
       : '${(hz / 1000).toStringAsFixed(1)}kHz';
+}
+
+/// 元数据兜底：缺失或损坏的标签（`?`、`？？`、U+FFFD 替换符、控制字符）
+/// 统一当作未知返回 null，避免界面上直接显示一串问号/乱码。
+String? _cleanMeta(String? value) {
+  if (value == null) return null;
+  final s = value.replaceAll(RegExp(r'[\u0000-\u001F\uFFFD]'), '').trim();
+  if (s.isEmpty || RegExp(r'^[?？]+$').hasMatch(s)) return null;
+  return s;
 }
 
 String _clientName() {
@@ -51,11 +60,16 @@ List<ChainNode> buildSignalChain({
   required bool muted,
 }) {
   if (song == null) return [];
-  final codec = song.codec ?? '?';
+  final codec = _cleanMeta(song.codec);
   final sr = _formatKhz(song.sampleRate);
-  final bit = song.bitDepth != null ? '${song.bitDepth}bit' : null;
-  final ch = song.channels != null ? '${song.channels}ch' : '?';
-  final src = [codec, sr, bit, ch].where((e) => e != null).join(' · ');
+  final bit =
+      (song.bitDepth != null && song.bitDepth! > 0) ? '${song.bitDepth}bit' : null;
+  final ch = (song.channels != null && song.channels! > 0)
+      ? '${song.channels}ch'
+      : null;
+  final parts = [codec, sr, bit, ch].whereType<String>();
+  // 元数据全缺时给一句可读的说明，而不是「？ · ？ · ？」式的乱码。
+  final src = parts.isEmpty ? '未知格式（元数据缺失）' : parts.join(' · ');
 
   final serverProcessed = presetId != null || quality != 'lossless';
 
@@ -116,11 +130,10 @@ List<ChainNode> buildSignalChain({
 
   return [
     ChainNode(FnIconName.music, l.sourceFile, src, 'active'),
-    ChainNode(
-        FnIconName.library, l.decodeToPcm(codec), l.symphoniaDecode, 'active'),
+    ChainNode(FnIconName.library, l.decodeToPcm(codec ?? '音频'),
+        l.symphoniaDecode, 'active'),
     serverProcessed
-        ? ChainNode(
-            FnIconName.dsp, l.resampleMix, l.resampleTarget(src), 'active')
+        ? ChainNode(FnIconName.dsp, l.resampleMix, l.resampleTarget, 'active')
         : ChainNode(
             FnIconName.dsp, l.resampleMix, l.resamplePassthrough, 'idle'),
     rgNode,

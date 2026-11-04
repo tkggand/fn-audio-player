@@ -162,15 +162,6 @@ class _TrackMenuSheetState extends State<_TrackMenuSheet> {
                       }
                     },
                   ),
-                  _Option(
-                    icon: CupertinoIcons.text_alignleft,
-                    label: l.lyricsEdit,
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push('/lyrics/${song.id}'
-                          '?title=${Uri.encodeComponent(song.title)}');
-                    },
-                  ),
                   if (ApiClient.instance.isAdmin)
                     _Option(
                       icon: CupertinoIcons.globe,

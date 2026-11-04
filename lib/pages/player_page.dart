@@ -400,48 +400,61 @@ class _PlayerPageState extends State<PlayerPage> {
                   stageH = math.min(stageH, box.maxHeight * 0.62);
                 }
                 stageH = stageH.clamp(160.0, 520.0).toDouble();
-                // 设计稿：mobile/laptop 页内容整体垂直居中（cover 上下留白均分）。
+                // 上半区（封面 + 指示器）在页头与底部操作区之间居中，
+                // 信息 / 进度 / 走带整块贴底（spaceBetween 把余量均分成两段空白）。
                 return SingleChildScrollView(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: box.maxHeight),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                            height: stageH,
-                            child: PageView(
-                              controller: _pager,
-                              onPageChanged: (i) => setState(() {
-                                _pane = i;
-                                if (i == 1) _lyricsVisited = true;
-                              }),
-                              children: [
-                                _CoverPane(song: song, bp: bp, side: side),
-                                _lyricsVisited
-                                    ? _LyricsPane(song: song)
-                                    : const SizedBox.shrink(),
-                              ],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(height: 16),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              height: stageH,
+                              child: PageView(
+                                controller: _pager,
+                                onPageChanged: (i) => setState(() {
+                                  _pane = i;
+                                  if (i == 1) _lyricsVisited = true;
+                                }),
+                                children: [
+                                  _CoverPane(song: song, bp: bp, side: side),
+                                  _lyricsVisited
+                                      ? _LyricsPane(song: song)
+                                      : const SizedBox.shrink(),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          _buildDots(desktop: false),
-                          const SizedBox(height: 22),
-                          _center560(narrow, _buildInfo(song, desktop: false)),
-                          // 频谱（Web 端在 mobile 隐藏，laptop/desktop 才显示）。
-                          if (narrow) ...[
-                            const SizedBox(height: 22),
-                            _center560(
-                              narrow,
-                              const PlaybackSpectrum(height: 60, showAxis: false),
-                            ),
+                            const SizedBox(height: 2),
+                            _buildDots(desktop: false),
                           ],
-                          const SizedBox(height: 20),
-                          _center560(narrow, _buildProgress(song)),
-                          const SizedBox(height: 2),
-                          _center560(narrow, _buildTransport()),
-                        ],
-                      ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 22),
+                            _center560(narrow, _buildInfo(song, desktop: false)),
+                            // 频谱（Web 端在 mobile 隐藏，laptop/desktop 才显示）。
+                            if (narrow) ...[
+                              const SizedBox(height: 22),
+                              _center560(
+                                narrow,
+                                const PlaybackSpectrum(
+                                  height: 60,
+                                  showAxis: false,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 20),
+                            _center560(narrow, _buildProgress(song)),
+                            const SizedBox(height: 2),
+                            _center560(narrow, _buildTransport()),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -792,6 +805,7 @@ class _PlayerPageState extends State<PlayerPage> {
     return FnScrubber(
       position: c.positionSec,
       duration: c.durationSec > 0 ? c.durationSec : (song.duration ?? 0),
+      buffered: c.bufferedSec,
       onSeek: c.seek,
       trackColor: Colors.white.withValues(alpha: 0.18),
       timeStyle: TextStyle(

@@ -26,8 +26,16 @@ const double kFnTabH = 56;
 /// 迷你播放器高度（design/v3 tokens --mini-h）。
 const double kFnMiniH = 56;
 
-/// Tab 页为悬浮 dock（mini 56 + margin 8 + tab 56）预留的底部空间。
-const double kFnDockInset = kFnMiniH + 8 + kFnTabH;
+/// Tab 页为悬浮 dock 预留的底部空间（不含 mini 条）。
+const double kFnDockInset = kFnTabH;
+
+/// mini 条是否在该路由展示：仅发现 / 曲库页（听歌页自带全屏播放，我的页不需要）。
+bool fnMiniOnRoute(String location) =>
+    location == '/discover' || location == '/library';
+
+/// 底部 dock 实际高度：Tab 导航 +（mini 条展示时）mini 高度与间距。
+double fnDockHOf(String location) =>
+    kFnTabH + (fnMiniOnRoute(location) ? kFnMiniH + 8 : 0);
 
 /// 封面氛围色相：由歌曲 id 稳定派生。
 int fnHue(int seed) => (seed * 47) % 360;
@@ -155,13 +163,18 @@ class FnCover extends StatelessWidget {
     if (size.isInfinite) {
       return LayoutBuilder(builder: (context, box) {
         final side = box.maxWidth.isFinite ? box.maxWidth : box.maxHeight;
-        return _build(side.isFinite ? side : 46, seed);
+        return _build(context, side.isFinite ? side : 46, seed);
       });
     }
-    return _build(size, seed);
+    return _build(context, size, seed);
   }
 
-  Widget _build(double side, int seed) {
+  Widget _build(BuildContext context, double side, int seed) {
+    // 按实际显示尺寸解码：库里都是原图（常见 1000px+，解码后每张 4MB 起），
+    // 曲库列表反复滚动时大量原图同时驻留会让 iOS 被系统 OOM 杀掉。
+    final int? px = side.isFinite
+        ? (side * MediaQuery.devicePixelRatioOf(context)).round()
+        : null;
     return Container(
       width: side,
       height: side,
@@ -183,6 +196,8 @@ class FnCover extends StatelessWidget {
           Image.network(
             ApiClient.instance.coverUrl(songId, kind: kind),
             fit: BoxFit.cover,
+            cacheWidth: px,
+            cacheHeight: px,
             errorBuilder: (_, __, ___) => _coverFallback(seed, side),
           ),
           IgnorePointer(
@@ -1808,9 +1823,12 @@ class FnScrubber extends StatefulWidget {
     required this.onSeek,
     this.height = 22,
     this.trackHeight = 4,
+    this.buffered = 0,
     this.activeColor,
     this.trackColor,
+    this.bufferedColor,
     this.timeStyle,
+    this.showTime = true,
   });
 
   final double position;
@@ -1818,9 +1836,16 @@ class FnScrubber extends StatefulWidget {
   final ValueChanged<double> onSeek;
   final double height;
   final double trackHeight;
+
+  /// 已加载/已缓冲到的位置（秒），在进度条上单独叠加一层底色。
+  final double buffered;
   final Color? activeColor;
   final Color? trackColor;
+  final Color? bufferedColor;
   final TextStyle? timeStyle;
+
+  /// 是否在进度条两端显示当前时间/总时长；外层已有时标签时可关闭。
+  final bool showTime;
 
   @override
   State<FnScrubber> createState() => _FnScrubberState();
@@ -1829,26 +1854,17 @@ class FnScrubber extends StatefulWidget {
 class _FnScrubberState extends State<FnScrubber> {
   /// 拖动中的目标位置（秒）：滑块跟手指走，不被外部周期刷新拉回。
   double? _drag;
-  DateTime _lastEmit = DateTime.fromMillisecondsSinceEpoch(0);
-
-  void _emit(double sec, {bool force = false}) {
-    final now = DateTime.now();
-    // 引擎拖动时每次 update 都 seek 会打爆解码线程，节流到 ~8 次/秒。
-    if (!force && now.difference(_lastEmit).inMilliseconds < 120) return;
-    _lastEmit = now;
-    widget.onSeek(sec);
-  }
 
   void _dragTo(Offset local, double width) {
     if (widget.duration <= 0) return;
     final sec = (local.dx / width).clamp(0.0, 1.0) * widget.duration;
     setState(() => _drag = sec);
-    _emit(sec);
   }
 
   void _endDrag() {
     final d = _drag;
-    if (d != null) _emit(d, force: true);
+    // 拖动过程只更新滑块，松手才真正 seek，避免频繁打断解码线程。
+    if (d != null) widget.onSeek(d);
     setState(() => _drag = null);
   }
 
@@ -1858,6 +1874,13 @@ class _FnScrubberState extends State<FnScrubber> {
     final ratio = widget.duration > 0
         ? (pos / widget.duration).clamp(0.0, 1.0)
         : 0.0;
+    final bufferedRatio = widget.duration > 0
+        ? (widget.buffered / widget.duration).clamp(0.0, 1.0)
+        : 0.0;
+    // 缓冲位置不应短于已播放位置（本地文件/投屏时引擎可能不上报缓冲）。
+    final shownBuffered = bufferedRatio < ratio ? ratio : bufferedRatio;
+    final bufferedColor =
+        widget.bufferedColor ?? Colors.grey.shade400.withValues(alpha: 0.65);
     final time = widget.timeStyle ??
         TextStyle(
           fontSize: 10.5,
@@ -1866,7 +1889,8 @@ class _FnScrubberState extends State<FnScrubber> {
         );
     return Row(
       children: [
-        SizedBox(width: 36, child: Text(fmtDuration(pos), style: time)),
+        if (widget.showTime)
+          SizedBox(width: 36, child: Text(fmtDuration(pos), style: time)),
         Expanded(
           child: LayoutBuilder(
             builder: (context, box) {
@@ -1897,12 +1921,24 @@ class _FnScrubberState extends State<FnScrubber> {
                           ),
                         ),
                         FractionallySizedBox(
+                          widthFactor: shownBuffered,
+                          child: Container(
+                            height: widget.trackHeight,
+                            decoration: BoxDecoration(
+                              color: bufferedColor,
+                              borderRadius:
+                                  BorderRadius.circular(widget.trackHeight),
+                            ),
+                          ),
+                        ),
+                        FractionallySizedBox(
                           widthFactor: ratio,
                           child: Container(
                             height: widget.trackHeight,
                             decoration: BoxDecoration(
                               color: widget.activeColor ?? FnColors.lime,
-                              borderRadius: BorderRadius.circular(widget.trackHeight),
+                              borderRadius:
+                                  BorderRadius.circular(widget.trackHeight),
                             ),
                           ),
                         ),
@@ -1914,14 +1950,15 @@ class _FnScrubberState extends State<FnScrubber> {
             },
           ),
         ),
-        SizedBox(
-          width: 36,
-          child: Text(
-            fmtDuration(widget.duration),
-            textAlign: TextAlign.right,
-            style: time,
+        if (widget.showTime)
+          SizedBox(
+            width: 36,
+            child: Text(
+              fmtDuration(widget.duration),
+              textAlign: TextAlign.right,
+              style: time,
+            ),
           ),
-        ),
       ],
     );
   }
@@ -2334,7 +2371,7 @@ Future<T?> showFnSheet<T>(
   );
 }
 
-/// 轻提示：底部悬浮胶囊。
+/// 轻提示：统一走 Material SnackBar（外观由 `snackBarTheme` 控制）。
 void fnToast(BuildContext context, String message, {IconData? icon}) {
   final messenger = ScaffoldMessenger.maybeOf(context);
   if (messenger == null) return;
@@ -2342,15 +2379,7 @@ void fnToast(BuildContext context, String message, {IconData? icon}) {
   messenger.showSnackBar(
     SnackBar(
       duration: const Duration(milliseconds: 1800),
-      backgroundColor: FnColors.glass2,
-      elevation: 12,
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 190),
-      shape: StadiumBorder(
-        side: BorderSide(color: FnColors.line2),
-      ),
       content: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
             Icon(icon, size: 16, color: FnColors.limeText),
@@ -2359,13 +2388,8 @@ void fnToast(BuildContext context, String message, {IconData? icon}) {
           Flexible(
             child: Text(
               message,
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                color: FnColors.textPrimary,
-              ),
             ),
           ),
         ],

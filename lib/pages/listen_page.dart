@@ -123,6 +123,23 @@ class _ListenPageState extends State<ListenPage> with FnThemeAware<ListenPage> {
     } catch (_) {}
   }
 
+  /// 漫游模式切换后控制器队列已被替换：把当前页同步到新队列，避免停留在旧歌单。
+  void _syncFeedWithQueue() {
+    final queue = _pc.queue;
+    if (queue.isEmpty) return;
+    final cur = _pc.current?.id;
+    var start = cur == null ? 0 : queue.indexWhere((s) => s.id == cur);
+    if (start < 0) start = 0;
+    final order = [...queue.sublist(start), ...queue.sublist(0, start)];
+    setState(() {
+      _songs = order;
+      _page = 0;
+      _hintHidden = true;
+    });
+    if (_pageController.hasClients) _pageController.jumpToPage(0);
+    _loadLyric(order.first);
+  }
+
   void _onPageChanged(int index) {
     setState(() {
       _page = index;
@@ -181,11 +198,17 @@ class _ListenPageState extends State<ListenPage> with FnThemeAware<ListenPage> {
                     ? CupertinoIcons.waveform
                     : Icons.shuffle_rounded,
             on: _roamMode == m.$1,
-            onTap: () {
+            onTap: () async {
               Navigator.pop(context);
+              final ok = await _pc.startRoam(m.$1, count: 20);
+              if (!mounted) return;
+              if (!ok) {
+                fnToast(context, _pc.lastError ?? '漫游失败');
+                return;
+              }
               setState(() => _roamMode = m.$1);
+              _syncFeedWithQueue();
               fnToast(context, '已切换到${m.$2}');
-              _pc.startRoam(m.$1, count: 20);
             },
           ),
       ],
@@ -726,14 +749,12 @@ class _FeedItem extends StatelessWidget {
                               duration: duration > 0
                                   ? duration
                                   : (song.duration ?? 0),
+                              buffered:
+                                  isCurrent ? PlayerController.instance.bufferedSec : 0,
                               onSeek: onSeek,
                               height: 18,
                               trackHeight: 2,
-                              timeStyle: const TextStyle(
-                                fontSize: 9,
-                                fontFamily: 'monospace',
-                                color: Colors.white,
-                              ),
+                              showTime: false,
                             ),
                           ),
                           SizedBox(

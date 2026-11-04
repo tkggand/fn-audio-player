@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../api.dart';
-import '../l10n/l10n.dart';
+import '../breakpoints.dart';
 import '../play_log.dart';
 import '../player_controller.dart';
 import '../theme.dart';
 import '../widgets/fn_ui.dart';
-import '../widgets/quality_sheet.dart';
+import '../widgets/history_cover_wall.dart';
 
-/// 我的：资料头部 + 统计 + 快捷入口 + 本周聆听 + 音频/系统设置。
+/// 我的：资料头部 + 统计 + 快捷入口 + 本周聆听。
 class MePage extends StatefulWidget {
   const MePage({super.key});
 
@@ -24,11 +24,11 @@ class _MePageState extends State<MePage> with FnThemeAware<MePage> {
   List<Song> _songs = const [];
   List<Song> _favs = const [];
   List<Playlist> _playlists = const [];
+  List<Song> _history = const [];
   List<int> _week = const [0, 0, 0, 0, 0, 0, 0];
   int _weekPlays = 0;
   int _weekSeconds = 0;
   String? _topArtist;
-  int _deviceCount = 0;
   bool _syncing = false;
 
   @override
@@ -37,109 +37,79 @@ class _MePageState extends State<MePage> with FnThemeAware<MePage> {
     _load();
   }
 
+  /// 单个请求失败后按 300ms / 900ms 退避重试，最多 3 次。
+  ///
+  /// 首次进入页面时偶发网络/鉴权抖动会让某一块数据缺失，
+  /// 表现为「只显示一部分，必须下拉刷新才完整」，重试可避免这种残缺首屏。
+  Future<T?> _loadRetry<T>(Future<T> Function() task) async {
+    const delays = [300, 900];
+    for (var i = 0;; i++) {
+      try {
+        return await task();
+      } catch (_) {
+        if (i >= delays.length) return null;
+        await Future<void>.delayed(Duration(milliseconds: delays[i]));
+      }
+    }
+  }
+
+  /// 历史封面墙自愈：首次进入时后端可能尚未就绪，
+  /// 按递增间隔重试，拿到即渲染，避免依赖用户手动下拉。
+  Future<void> _healHistory() async {
+    const delays = [600, 1200, 2500, 5000];
+    for (final ms in delays) {
+      await Future<void>.delayed(Duration(milliseconds: ms));
+      if (!mounted || _history.isNotEmpty) return;
+      final again =
+          await _loadRetry(() => ApiClient.instance.fetchHistory(limit: 24));
+      if (!mounted || again == null || again.isEmpty) continue;
+      setState(() {
+        _history = again;
+      });
+      return;
+    }
+  }
+
   Future<void> _load() async {
+    if (_syncing) return;
     setState(() {
       _syncing = true;
     });
-    try {
-      final res = await Future.wait<Object>([
-        ApiClient.instance.fetchSongs(),
-        ApiClient.instance.fetchFavorites(),
-        ApiClient.instance.fetchPlaylists(),
-      ]);
-      final week = await PlayLog.instance.weekCounts();
-      final summary = await PlayLog.instance.weekSummary();
-      var devices = 0;
-      try {
-        devices = (await ApiClient.instance.dlnaRenderers()).length;
-      } catch (_) {}
-      if (!mounted) return;
+    // 1) 历史优先：先拿到就可以渲染封面墙，首屏立即有内容。
+    final history =
+        await _loadRetry(() => ApiClient.instance.fetchHistory(limit: 24));
+    if (!mounted) return;
+    if (history != null && history.isNotEmpty) {
       setState(() {
-        _songs = res[0] as List<Song>;
-        _favs = res[1] as List<Song>;
-        _playlists = res[2] as List<Playlist>;
-        _week = week;
-        _weekPlays = summary.plays;
-        _weekSeconds = summary.seconds;
-        _topArtist = summary.topArtist;
-        _deviceCount = devices;
-        _syncing = false;
+        _history = history;
       });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _syncing = false;
-      });
+    } else {
+      // 首次没拿到历史（后端 / 网络尚未就绪）：按递增间隔自补几次，
+      // 让封面墙自己出现，而不是必须由用户下拉刷新触发。
+      _healHistory();
     }
-  }
-
-  Future<void> _pickQuality() async {
-    final q = await openQualitySheet(context, current: PlayerController.instance.quality);
-    if (q != null) {
-      await PlayerController.instance.setQuality(q);
-      if (!mounted) return;
-      fnToast(context, '音质已切换为 ${qualityLabel(context, q)}');
-      setState(() {});
-    }
-  }
-
-  void _pickLanguage() {
-    showFnSheet<void>(
-      context,
-      eyebrow: 'LANGUAGE',
-      title: '界面语言',
-      subtitle: '通用导航与标签会同步切换',
-      children: [
-        for (final (mode, label) in [
-          (FnLocaleMode.system, '跟随系统'),
-          (FnLocaleMode.zh, '简体中文'),
-          (FnLocaleMode.en, 'English'),
-        ])
-          FnOptionRow(
-            title: label,
-            icon: CupertinoIcons.globe,
-            on: FnLocaleController.instance.value == mode,
-            onTap: () async {
-              Navigator.pop(context);
-              await FnLocaleController.instance.setMode(mode);
-              if (mounted) fnToast(context, '已切换为$label');
-            },
-          ),
-      ],
-    );
-  }
-
-  Future<void> _logout() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: FnColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(FnRadius.md),
-          side: BorderSide(color: FnColors.line2),
-        ),
-        title: const Text('退出登录？', style: TextStyle(fontSize: 17)),
-        content: Text(
-          '本机缓存的曲库索引会保留，下次连接可直接恢复。',
-          style: TextStyle(fontSize: 13, color: FnColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('取消',
-                style: TextStyle(color: FnColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('退出',
-                style: TextStyle(color: FnColors.coral)),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    await ApiClient.instance.logout();
-    if (mounted) context.go('/login');
+    // 2) 其余数据并行加载；单项失败时保留旧值，不影响其它区块。
+    final songsF = _loadRetry(() => ApiClient.instance.fetchSongs());
+    final favsF = _loadRetry(() => ApiClient.instance.fetchFavorites());
+    final playlistsF = _loadRetry(() => ApiClient.instance.fetchPlaylists());
+    final weekF = _loadRetry(() => PlayLog.instance.weekCounts());
+    final summaryF = _loadRetry(() => PlayLog.instance.weekSummary());
+    final songs = await songsF;
+    final favs = await favsF;
+    final playlists = await playlistsF;
+    final week = await weekF;
+    final summary = await summaryF;
+    if (!mounted) return;
+    setState(() {
+      _songs = songs ?? _songs;
+      _favs = favs ?? _favs;
+      _playlists = playlists ?? _playlists;
+      _week = week ?? _week;
+      _weekPlays = summary?.plays ?? _weekPlays;
+      _weekSeconds = summary?.seconds ?? _weekSeconds;
+      _topArtist = summary?.topArtist ?? _topArtist;
+      _syncing = false;
+    });
   }
 
   @override
@@ -147,12 +117,13 @@ class _MePageState extends State<MePage> with FnThemeAware<MePage> {
     final username = ApiClient.instance.username ?? 'FN';
     final coverId = PlayerController.instance.current?.id ??
         (_favs.isNotEmpty ? _favs.first.id : 59);
-    final themeMode = FnThemeController.instance.value;
     final weekSeed = _week.reduce((a, b) => a + b);
     final bars = weekSeed == 0
         ? const [0, 0, 0, 0, 0, 0, 0]
         : _week.map((v) => v).toList();
     final maxBar = bars.fold<int>(1, (m, v) => v > m ? v : m);
+    // 移动端顶部历史播放封面墙；无历史时不占位，头部恢复自带状态栏留白。
+    final showWall = fnBpOf(context).isMobile && _history.isNotEmpty;
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: RefreshIndicator(
@@ -164,12 +135,21 @@ class _MePageState extends State<MePage> with FnThemeAware<MePage> {
           physics: const AlwaysScrollableScrollPhysics(
               parent: BouncingScrollPhysics()),
           children: [
-            _Hero(
-              coverId: coverId,
-              name: username,
-              trackCount: _songs.length,
-              syncing: _syncing,
-              onSync: _load,
+            if (showWall)
+              HistoryCoverWall(
+                songs: _history,
+                onTap: (song) => PlayerController.instance.playOne(song),
+              ),
+            // 头部背景是模糊图层，独立成层避免每次封面墙位移都重新模糊。
+            RepaintBoundary(
+              child: _Hero(
+                coverId: coverId,
+                name: username,
+                trackCount: _songs.length,
+                syncing: _syncing,
+                onSync: _load,
+                topInset: showWall ? 8 : null,
+              ),
             ),
             Transform.translate(
               offset: const Offset(0, -24),
@@ -253,126 +233,6 @@ class _MePageState extends State<MePage> with FnThemeAware<MePage> {
               topArtist: _topArtist,
               onOpenHistory: () => context.push('/history'),
             ),
-            const FnGroupLabel('音频'),
-            FnGroupCard(children: [
-              FnListRow(
-                title: '音质',
-                subtitle: '内网优先无损',
-                icon: Icons.graphic_eq_rounded,
-                value: qualityLabel(context, PlayerController.instance.quality),
-                valueColor: FnColors.limeText,
-                onTap: _pickQuality,
-              ),
-              FnListRow(
-                title: '调音',
-                subtitle: 'GEQ · 交叉馈送 · 淡入淡出',
-                icon: CupertinoIcons.slider_horizontal_3,
-                value: '原声纯净',
-                valueColor: FnColors.limeText,
-                onTap: () => context.push('/tuning'),
-              ),
-              FnListRow(
-                title: 'ReplayGain',
-                subtitle: '响度归一与批量分析',
-                icon: Icons.waves_rounded,
-                onTap: () => context.push('/replaygain'),
-              ),
-              FnListRow(
-                title: '播放设备',
-                subtitle: _deviceCount > 0
-                    ? '$_deviceCount 台 DLNA 在线'
-                    : '未发现 DLNA 渲染器',
-                icon: CupertinoIcons.device_phone_portrait,
-                value: PlayerController.instance.isCasting ? '投屏中' : '本机扬声器',
-                onTap: () => context.push('/devices'),
-              ),
-            ]),
-            const FnGroupLabel('系统'),
-            FnGroupCard(children: [
-              Container(
-                constraints: const BoxConstraints(minHeight: 56),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: FnColors.glassLight,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(
-                        themeMode.isDark
-                            ? CupertinoIcons.moon
-                            : CupertinoIcons.sun_max,
-                        size: 18,
-                        color: FnColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('主题',
-                              style: TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: FnColors.textPrimary)),
-                          Text(
-                            themeMode.isDark
-                                ? '跟随音乐，保持暗色'
-                                : '浅色 · 适合白天浏览',
-                            style: TextStyle(
-                                fontSize: 11.5,
-                                color: FnColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ),
-                    FnSwitch(
-                      value: themeMode.isDark,
-                      onChanged: (v) async {
-                        await FnThemeController.instance.setMode(
-                            v ? FnThemeMode.dark : FnThemeMode.light);
-                        if (!context.mounted) return;
-                        fnToast(
-                          context,
-                          v ? '已切换到暗色主题' : '已切换到浅色主题',
-                          icon: v ? CupertinoIcons.moon : CupertinoIcons.sun_max,
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              FnListRow(
-                title: '语言',
-                subtitle: '界面与元数据',
-                icon: CupertinoIcons.globe,
-                value: switch (FnLocaleController.instance.value) {
-                  FnLocaleMode.zh => '简体中文',
-                  FnLocaleMode.en => 'English',
-                  FnLocaleMode.system => '跟随系统',
-                },
-                onTap: _pickLanguage,
-              ),
-              FnListRow(
-                title: '设置',
-                subtitle: '同步、自动播放、关于',
-                icon: CupertinoIcons.gear,
-                onTap: () => context.push('/settings'),
-              ),
-              FnListRow(
-                title: '退出登录',
-                subtitle: '返回服务器连接页',
-                icon: CupertinoIcons.square_arrow_right,
-                danger: true,
-                onTap: _logout,
-              ),
-            ]),
             FnPageFoot(
               left: 'FN AUDIO v2.0 · SELF-HOSTED',
               right: '${_songs.length} TRACKS',
@@ -391,6 +251,7 @@ class _Hero extends StatelessWidget {
     required this.trackCount,
     required this.syncing,
     required this.onSync,
+    this.topInset,
   });
 
   final int coverId;
@@ -399,9 +260,12 @@ class _Hero extends StatelessWidget {
   final bool syncing;
   final VoidCallback onSync;
 
+  /// 顶部留白；上方有封面墙时传小值，否则按状态栏高度留白。
+  final double? topInset;
+
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.paddingOf(context).top;
+    final top = topInset ?? MediaQuery.paddingOf(context).top;
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(bottom: Radius.circular(30)),
       child: SizedBox(
@@ -416,9 +280,9 @@ class _Hero extends StatelessWidget {
                 child: Image.network(
                   ApiClient.instance.coverUrl(coverId),
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      DecoratedBox(decoration: BoxDecoration(
-                          gradient: fnCoverGradient(coverId))),
+                  errorBuilder: (_, __, ___) => DecoratedBox(
+                      decoration:
+                          BoxDecoration(gradient: fnCoverGradient(coverId))),
                 ),
               ),
             ),

@@ -659,7 +659,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deviceLocal => '本机';
 
   @override
-  String get clientAudioOut => '客户端音频输出';
+  String get clientAudioOut => '音频输出';
 
   @override
   String scanFailed(String error) {
@@ -784,9 +784,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get lyricsEdit => '歌词查看 / 编辑';
-
-  @override
   String get scrapeMetadata => '联网刮削元数据';
 
   @override
@@ -854,18 +851,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get flacFollowSource => 'FLAC 跟随源';
 
   @override
-  String get httpStream => 'HTTP 音频流（服务端整段处理）';
+  String get httpStream => 'HTTP 音频流（服务端处理）';
 
   @override
   String outParams(String label) {
-    return '$label · 48kHz 立体声';
+    return '$label · 48kHz';
   }
 
   @override
   String get httpDirect => 'HTTP 直出（原始文件）';
 
   @override
-  String get httpDirectSub => '字节流 Range 寻址 · 服务端不处理';
+  String get httpDirectSub => 'Range 字节流 · 服务端不处理';
 
   @override
   String get sourceFile => '源文件';
@@ -876,15 +873,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get symphoniaDecode => 'symphonia 服务端解码';
+  String get symphoniaDecode => 'symphonia 解码';
 
   @override
   String get resampleMix => '重采样 / 混音';
 
   @override
-  String resampleTarget(String source) {
-    return '$source → 48kHz · 立体声';
-  }
+  String get resampleTarget => '48kHz · 立体声';
 
   @override
   String get resamplePassthrough => '直通，保持原始格式';
@@ -895,7 +890,7 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get camillaDsp => 'camilladsp DSP 链路处理';
+  String get camillaDsp => 'camilladsp DSP';
 
   @override
   String get presetIdle => '未启用 · 原声直通';
@@ -909,10 +904,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get clientVolume => '客户端本地音量';
+  String get clientVolume => '本地音量';
 
   @override
-  String get dlnaRendererOutput => 'DLNA 渲染器输出';
+  String get dlnaRendererOutput => 'DLNA 渲染器';
 
   @override
   String get lyricsLoadFailed => '歌词加载失败';

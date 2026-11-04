@@ -24,6 +24,9 @@ class SearchPage extends StatefulWidget {
 class _SearchPageState extends State<SearchPage> {
   static const _historyKey = 'fn_search_history';
 
+  /// 输入框圆角：与登录页表单保持一致，比卡片小一档。
+  static const _fieldRadius = BorderRadius.all(Radius.circular(10));
+
   final _ctrl = TextEditingController();
   final _focus = FocusNode();
   Timer? _debounce;
@@ -196,68 +199,72 @@ class _SearchPageState extends State<SearchPage> {
           ),
           const SizedBox(width: 4),
           Expanded(
-            child: Container(
-              height: 40,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: FnColors.surface2,
-                borderRadius: BorderRadius.circular(12),
-                // 聚焦时不额外描边：输入框不随焦点变色。
-                border: Border.all(color: FnColors.line),
-              ),
-              child: Row(
-                children: [
-                  Icon(CupertinoIcons.search,
+            child: SizedBox(
+              height: 46,
+              child: TextField(
+                controller: _ctrl,
+                focusNode: _focus,
+                autocorrect: false,
+                textInputAction: TextInputAction.search,
+                onChanged: _onChanged,
+                onSubmitted: (v) {
+                  _search();
+                  _remember(v.trim());
+                  _focus.unfocus();
+                },
+                textAlignVertical: TextAlignVertical.center,
+                style: TextStyle(fontSize: 14, color: FnColors.textPrimary),
+                cursorColor: FnColors.lime,
+                decoration: InputDecoration(
+                  isDense: true,
+                  filled: true,
+                  fillColor: FnColors.surface2,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+                  // 搜索图标与清空嵌在输入框内，与登录页表单一致；
+                  // 退出页面已由左侧返回箭头承担，不再重复放置「取消」。
+                  prefixIcon: Icon(CupertinoIcons.search,
                       size: 17, color: FnColors.textTertiary),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: TextField(
-                      controller: _ctrl,
-                      focusNode: _focus,
-                      autocorrect: false,
-                      textInputAction: TextInputAction.search,
-                      onChanged: _onChanged,
-                      onSubmitted: (v) {
-                        _search();
-                        _remember(v.trim());
-                        _focus.unfocus();
-                      },
-                      style: TextStyle(
-                          fontSize: 14, color: FnColors.textPrimary),
-                      cursorColor: FnColors.lime,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        border: InputBorder.none,
-                        hintText: '搜索歌曲、专辑、艺人',
-                        hintStyle: TextStyle(
-                            fontSize: 14, color: FnColors.textTertiary),
-                      ),
-                    ),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 40, minHeight: 44),
+                  suffixIcon: _query.isNotEmpty
+                      ? GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            _ctrl.clear();
+                            _onChanged('');
+                            _focus.requestFocus();
+                          },
+                          child: Tooltip(
+                            message: '清空',
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 12),
+                              child: Icon(CupertinoIcons.xmark_circle_fill,
+                                  size: 16, color: FnColors.textTertiary),
+                            ),
+                          ),
+                        )
+                      : null,
+                  suffixIconConstraints:
+                      const BoxConstraints(minWidth: 40, minHeight: 44),
+                  hintText: '搜索歌曲、专辑、艺人',
+                  hintStyle:
+                      TextStyle(fontSize: 14, color: FnColors.textTertiary),
+                  border: const OutlineInputBorder(
+                    borderRadius: _fieldRadius,
+                    borderSide: BorderSide.none,
                   ),
-                  if (_query.isNotEmpty)
-                    GestureDetector(
-                      onTap: () {
-                        _ctrl.clear();
-                        _onChanged('');
-                        _focus.requestFocus();
-                      },
-                      child: Icon(CupertinoIcons.xmark_circle_fill,
-                          size: 16, color: FnColors.textTertiary),
-                    ),
-                ],
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: _fieldRadius,
+                    borderSide: BorderSide(color: FnColors.line),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: _fieldRadius,
+                    borderSide: BorderSide(color: FnColors.lime, width: 1.2),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => Navigator.of(context).maybePop(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2),
-              child: Text('取消',
-                  style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: FnColors.limeText)),
             ),
           ),
         ],

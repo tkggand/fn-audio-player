@@ -92,6 +92,10 @@ class FnCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 按显示尺寸解码（原图 1000px+，一张解码后 4MB 起；列表反复滚动会 OOM）。
+    final int? px = size.isFinite
+        ? (size * MediaQuery.devicePixelRatioOf(context)).round()
+        : null;
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
       child: SizedBox(
@@ -100,6 +104,8 @@ class FnCover extends StatelessWidget {
         child: Image.network(
           ApiClient.instance.coverUrl(songId, kind: kind),
           fit: BoxFit.cover,
+          cacheWidth: px,
+          cacheHeight: px,
           errorBuilder: (_, __, ___) => Container(
             color: FnColors.raisedHigh,
             child: Icon(CupertinoIcons.music_note,

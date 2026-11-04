@@ -1,17 +1,15 @@
-import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../breakpoints.dart';
-import '../player_controller.dart';
 import '../theme.dart';
 import 'fn_ui.dart';
 import 'mini_player.dart';
 
-/// mobile 档应用外壳：4 Tab（听歌 / 发现 / 曲库 / 我的）+ 悬浮迷你播放器 + 底部导航。
+/// mobile 档应用外壳：底部 4 Tab（听歌 / 发现 / 曲库 / 我的）+ 迷你播放器 + 底部导航。
 ///
-/// 迷你播放器与底部导航同为毛玻璃材质，叠在页面内容之上；
-/// Tab 页内容需要预留 [kFnDockInset] 的底部空间。
+/// 迷你播放器只在发现 / 曲库页展示，与底部导航同为毛玻璃材质叠在内容之上；
+/// Tab 页内容按 [fnDockHOf] 预留底部空间。
 /// laptop / desktop 档由 [AppFrame] 提供 Rail/Sidebar + 播放条，这里直接透传。
 class AppShell extends StatelessWidget {
   const AppShell({
@@ -37,14 +35,18 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!fnBpOf(context).isMobile) return child;
-    // listen 页本身是全屏播放器，不再叠 mini 条；底部 4 Tab 保留，否则进听歌后无法切换。
-    final isListen = location == '/' || location == '/listen';
+    // mini 条只在发现 / 曲库页展示：听歌页本身是全屏播放器，我的页不需要。
+    final showMini = fnMiniOnRoute(location);
     final zh = Localizations.localeOf(context).languageCode == 'zh';
+    // 统一 Material outlined 图标，并按字形实际墨迹尺寸补偿字号：
+    // 实测 24pt 下墨迹高度 explore/library ≈ 20、
+    // person_outline 仅 ≈ 16，所以「我的」放大到 29 才能与其余图标视觉等大。
     final items = <_TabItem>[
-      _TabItem(zh ? '听歌' : 'Listen', CupertinoIcons.waveform),
-      _TabItem(zh ? '发现' : 'Discover', CupertinoIcons.compass),
-      _TabItem(zh ? '曲库' : 'Library', CupertinoIcons.collections),
-      _TabItem(zh ? '我的' : 'Me', CupertinoIcons.person),
+      _TabItem(zh ? '听歌' : 'Listen', Icons.headphones_outlined, size: 24),
+      _TabItem(zh ? '发现' : 'Discover', Icons.explore_outlined, size: 24),
+      _TabItem(zh ? '曲库' : 'Library', Icons.library_music_outlined,
+          size: 24),
+      _TabItem(zh ? '我的' : 'Me', Icons.person_outline, size: 29),
     ];
 
     final bottom = MediaQuery.paddingOf(context).bottom;
@@ -59,8 +61,7 @@ class AppShell extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (!isListen && PlayerController.instance.current != null)
-                  const MiniPlayer(),
+                if (showMini) const MiniPlayer(),
                 _TabBar(
                   currentIndex: _index,
                   items: items,
@@ -124,49 +125,15 @@ class _TabBar extends StatelessWidget {
       onTap: () => onTap(index),
       child: SizedBox(
         width: 76,
-        // 选中点与 CSS `.tab::after` 同形：绝对定位在顶部留白里，不占内容高度。
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.topCenter,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Icon(
-                  item.icon,
-                  size: 23,
-                  color: on ? FnColors.limeText : FnColors.textTertiary,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  item.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: on ? FontWeight.w600 : FontWeight.w500,
-                    letterSpacing: 0.2,
-                    color: on ? FnColors.textPrimary : FnColors.textTertiary,
-                  ),
-                ),
-              ],
-            ),
-            Positioned(
-              top: -7,
-              child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 200),
-                opacity: on ? 1 : 0,
-                child: Container(
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: FnColors.lime,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            ),
-          ],
+        child: Semantics(
+          button: true,
+          label: item.label,
+          selected: on,
+          child: Icon(
+            item.icon,
+            size: item.size,
+            color: on ? FnColors.limeText : FnColors.textTertiary,
+          ),
         ),
       ),
     );
@@ -176,5 +143,8 @@ class _TabBar extends StatelessWidget {
 class _TabItem {
   final String label;
   final IconData icon;
-  const _TabItem(this.label, this.icon);
+
+  /// 图标字号：按字形墨迹尺寸补偿，使各 Tab 视觉大小一致。
+  final double size;
+  const _TabItem(this.label, this.icon, {this.size = 24});
 }

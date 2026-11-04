@@ -1283,7 +1283,7 @@ abstract class AppLocalizations {
   /// No description provided for @clientAudioOut.
   ///
   /// In zh, this message translates to:
-  /// **'客户端音频输出'**
+  /// **'音频输出'**
   String get clientAudioOut;
 
   /// No description provided for @scanFailed.
@@ -1502,12 +1502,6 @@ abstract class AppLocalizations {
   /// **'操作失败：{error}'**
   String opFailed(String error);
 
-  /// No description provided for @lyricsEdit.
-  ///
-  /// In zh, this message translates to:
-  /// **'歌词查看 / 编辑'**
-  String get lyricsEdit;
-
   /// No description provided for @scrapeMetadata.
   ///
   /// In zh, this message translates to:
@@ -1625,13 +1619,13 @@ abstract class AppLocalizations {
   /// No description provided for @httpStream.
   ///
   /// In zh, this message translates to:
-  /// **'HTTP 音频流（服务端整段处理）'**
+  /// **'HTTP 音频流（服务端处理）'**
   String get httpStream;
 
   /// No description provided for @outParams.
   ///
   /// In zh, this message translates to:
-  /// **'{label} · 48kHz 立体声'**
+  /// **'{label} · 48kHz'**
   String outParams(String label);
 
   /// No description provided for @httpDirect.
@@ -1643,7 +1637,7 @@ abstract class AppLocalizations {
   /// No description provided for @httpDirectSub.
   ///
   /// In zh, this message translates to:
-  /// **'字节流 Range 寻址 · 服务端不处理'**
+  /// **'Range 字节流 · 服务端不处理'**
   String get httpDirectSub;
 
   /// No description provided for @sourceFile.
@@ -1661,7 +1655,7 @@ abstract class AppLocalizations {
   /// No description provided for @symphoniaDecode.
   ///
   /// In zh, this message translates to:
-  /// **'symphonia 服务端解码'**
+  /// **'symphonia 解码'**
   String get symphoniaDecode;
 
   /// No description provided for @resampleMix.
@@ -1673,8 +1667,8 @@ abstract class AppLocalizations {
   /// No description provided for @resampleTarget.
   ///
   /// In zh, this message translates to:
-  /// **'{source} → 48kHz · 立体声'**
-  String resampleTarget(String source);
+  /// **'48kHz · 立体声'**
+  String get resampleTarget;
 
   /// No description provided for @resamplePassthrough.
   ///
@@ -1691,7 +1685,7 @@ abstract class AppLocalizations {
   /// No description provided for @camillaDsp.
   ///
   /// In zh, this message translates to:
-  /// **'camilladsp DSP 链路处理'**
+  /// **'camilladsp DSP'**
   String get camillaDsp;
 
   /// No description provided for @presetIdle.
@@ -1715,13 +1709,13 @@ abstract class AppLocalizations {
   /// No description provided for @clientVolume.
   ///
   /// In zh, this message translates to:
-  /// **'客户端本地音量'**
+  /// **'本地音量'**
   String get clientVolume;
 
   /// No description provided for @dlnaRendererOutput.
   ///
   /// In zh, this message translates to:
-  /// **'DLNA 渲染器输出'**
+  /// **'DLNA 渲染器'**
   String get dlnaRendererOutput;
 
   /// No description provided for @lyricsLoadFailed.

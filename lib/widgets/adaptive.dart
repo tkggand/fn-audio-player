@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart' show CupertinoIcons;
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../api.dart';
 import '../breakpoints.dart';
@@ -10,8 +11,10 @@ import 'fn_ui.dart';
 double fnPadOf(BuildContext context) => fnPagePad(context);
 
 /// 内容底部留白：mobile 让位 mini 条 + TabBar，宽屏由播放条承担（AppFrame）。
-double fnBottomGapOf(BuildContext context) =>
-    fnBpOf(context).isMobile ? kFnDockInset + 12 : 24;
+double fnBottomGapOf(BuildContext context) {
+  if (!fnBpOf(context).isMobile) return 24;
+  return fnDockHOf(GoRouterState.of(context).uri.path) + 12;
+}
 
 /// 三档网格列数（mobile 2 / laptop 3–4 / desktop auto-fill ≥4）。
 int fnGridCols(

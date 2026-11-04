@@ -25,6 +25,9 @@ dependencies:
   audio_session: ^0.1.24
   shared_preferences: ^2.3.3
   web_socket_channel: ^3.0.1
+  # 局域网服务器自动发现：与后端 `_fnaudio._tcp` mDNS 广播配套（纯 dart:io 实现，
+  # 无原生插件，不影响各平台插件注册）。
+  multicast_dns: ^0.3.3
   just_audio_windows: ^0.2.3
   file_selector: ^1.0.3
   smtc_windows: ^1.1.0

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart'
     show CupertinoActivityIndicator, CupertinoIcons;
 import 'package:flutter/material.dart';
@@ -6,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../api.dart';
 import '../breakpoints.dart';
+import '../discovery.dart';
 import '../l10n/l10n.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -24,15 +27,23 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   static const _rememberKey = 'fn_login_remember';
   static const _userKey = 'fn_login_username';
+  /// 与设置页「自动发现服务器」开关共用同一键。
+  static const _autoDiscoverKey = 'fn_auto_discover';
+
+  /// 输入框圆角：比列表/卡片小一档，避免与卡片视觉同级。
+  static const _fieldRadius = BorderRadius.all(Radius.circular(10));
 
   final _baseUrl = TextEditingController(text: ApiClient.instance.baseUrl);
   final _username = TextEditingController();
   final _password = TextEditingController();
 
   late final AnimationController _shake;
+  /// 扫描局域网时让「发现」图标轻微呼吸，替代转圈 spinner。
+  late final AnimationController _pulse;
+  late final Animation<double> _pulseFade;
   bool _loading = false;
   bool _pwdVisible = false;
   bool _remember = true;
@@ -47,12 +58,20 @@ class _LoginPageState extends State<LoginPage>
       vsync: this,
       duration: const Duration(milliseconds: 420),
     );
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _pulseFade = Tween<double>(begin: 0.3, end: 1).animate(
+      CurvedAnimation(parent: _pulse, curve: Curves.easeInOut),
+    );
     _restore();
   }
 
   @override
   void dispose() {
     _shake.dispose();
+    _pulse.dispose();
     _baseUrl.dispose();
     _username.dispose();
     _password.dispose();
@@ -62,6 +81,7 @@ class _LoginPageState extends State<LoginPage>
   Future<void> _restore() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
+    final autoDiscover = prefs.getBool(_autoDiscoverKey) ?? true;
     setState(() {
       _remember = prefs.getBool(_rememberKey) ?? true;
       final saved = prefs.getString(_userKey);
@@ -71,6 +91,10 @@ class _LoginPageState extends State<LoginPage>
         _username.text = 'admin';
       }
     });
+    // 开启「自动发现服务器」且没有手动填写过地址时，进入登录页静默扫一次局域网。
+    if (autoDiscover && !ApiClient.instance.hasCustomBase) {
+      unawaited(_autoDiscover());
+    }
   }
 
   void _fail(String message) {
@@ -123,22 +147,82 @@ class _LoginPageState extends State<LoginPage>
     }
   }
 
+  /// 扫描局域网 mDNS 并返回第一个 HTTP 探测可达的服务端。
+  Future<DiscoveredServer?> _findReachable() async {
+    // 同机后端优先探测：Windows 上多个进程共享 5353 端口时，只有最后绑定的
+    // socket 能收到组播，后端收不到 App 发出的查询，同机 mDNS 必然失败。
+    final DiscoveredServer? local = _localServer();
+    if (local != null && await ServerDiscovery.probe(local.baseUrl)) {
+      return local;
+    }
+    final List<DiscoveredServer> servers = await ServerDiscovery.find();
+    for (final DiscoveredServer server in servers) {
+      if (await ServerDiscovery.probe(server.baseUrl)) return server;
+    }
+    return null;
+  }
+
+  /// 由平台默认地址构造「本机服务器」候选（桌面版通常直接连本机后端）。
+  DiscoveredServer? _localServer() {
+    final Uri? uri = Uri.tryParse(ApiClient.platformDefault);
+    if (uri == null || uri.host.isEmpty) return null;
+    return DiscoveredServer(
+      name: '本机服务器',
+      host: uri.host,
+      port: uri.hasPort ? uri.port : 80,
+    );
+  }
+
+  /// 统一控制扫描态：驱动发现图标的呼吸动画，避免出现突兀的转圈 spinner。
+  void _setDiscovering(bool value) {
+    setState(() => _discovering = value);
+    if (value) {
+      _pulse.repeat(reverse: true);
+    } else {
+      _pulse.stop();
+      _pulse.value = 0;
+    }
+  }
+
+  /// 静默自动发现：找到就填入地址，找不到保留当前默认值，不打扰用户。
+  Future<void> _autoDiscover() async {
+    if (_discovering) return;
+    _setDiscovering(true);
+    final DiscoveredServer? target = await _findReachable();
+    if (!mounted) return;
+    _setDiscovering(false);
+    if (target != null) _baseUrl.text = target.baseUrl;
+  }
+
+  /// 手动「发现」：扫描局域网并给出明确反馈。
   Future<void> _discover() async {
     if (_discovering) return;
-    setState(() => _discovering = true);
-    await Future<void>.delayed(const Duration(milliseconds: 700));
+    _setDiscovering(true);
+    setState(() {
+      _error = null;
+      _status = '正在扫描局域网…';
+    });
+    final DiscoveredServer? target = await _findReachable();
     if (!mounted) return;
-    final current = _baseUrl.text.trim();
-    final fallback = ApiClient.platformDefault;
-    setState(() => _discovering = false);
-    if (current.isEmpty) {
-      _baseUrl.text = fallback;
-      fnToast(context, '已填入默认地址 $fallback',
-          icon: Icons.wifi_tethering_rounded);
-    } else {
-      fnToast(context, '未发现其他服务器，请确认地址',
-          icon: Icons.wifi_tethering_rounded);
+    _setDiscovering(false);
+    setState(() => _status = null);
+
+    if (target == null) {
+      final current = _baseUrl.text.trim();
+      final fallback = ApiClient.platformDefault;
+      if (current.isEmpty) {
+        _baseUrl.text = fallback;
+        fnToast(context, '未发现服务器，已填入默认地址 $fallback',
+            icon: Icons.wifi_tethering_rounded);
+      } else {
+        fnToast(context, '未发现服务器，请确认与本机处于同一局域网',
+            icon: Icons.wifi_tethering_rounded);
+      }
+      return;
     }
+    _baseUrl.text = target.baseUrl;
+    fnToast(context, '已发现 ${target.name} · ${target.baseUrl}',
+        icon: Icons.wifi_tethering_rounded);
   }
 
   @override
@@ -198,18 +282,21 @@ class _LoginPageState extends State<LoginPage>
                     keyboardType: TextInputType.url,
                     trailing: GestureDetector(
                       onTap: _discovering ? null : _discover,
-                      child: _discovering
-                          ? const SizedBox(
-                              width: 13,
-                              height: 13,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 1.6),
-                            )
-                          : Text('自动发现',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: _p.lime)),
+                      child: Tooltip(
+                        message: _discovering ? '正在扫描局域网…' : '自动发现服务器',
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 12),
+                          // 扫描中让图标轻微呼吸，位置和大小保持不变。
+                          child: FadeTransition(
+                            opacity: _discovering
+                                ? _pulseFade
+                                : const AlwaysStoppedAnimation<double>(1),
+                            child: Icon(Icons.wifi_tethering_rounded,
+                                size: 18, color: _p.lime),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -231,11 +318,19 @@ class _LoginPageState extends State<LoginPage>
                     onSubmitted: (_) => _login(),
                     trailing: GestureDetector(
                       onTap: () => setState(() => _pwdVisible = !_pwdVisible),
-                      child: Text(_pwdVisible ? '隐藏' : '显示',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: _p.lime)),
+                      child: Tooltip(
+                        message: _pwdVisible ? '隐藏密码' : '显示密码',
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 12),
+                          child: Icon(
+                              _pwdVisible
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              size: 18,
+                              color: _p.lime),
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 14),
@@ -443,42 +538,46 @@ class _LoginPageState extends State<LoginPage>
                   fontWeight: FontWeight.w600,
                   color: _p.textTertiary)),
         ),
-        Container(
-          height: 50,
-          padding: const EdgeInsets.symmetric(horizontal: 13),
-          decoration: BoxDecoration(
-            color: _p.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _p.line),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, size: 17, color: _p.textTertiary),
-              const SizedBox(width: 9),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  obscureText: obscure,
-                  autocorrect: false,
-                  keyboardType: keyboardType,
-                  textInputAction: textInputAction,
-                  onSubmitted: onSubmitted,
-                  style: TextStyle(fontSize: 14, color: _p.textPrimary),
-                  cursorColor: _p.lime,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: InputBorder.none,
-                    hintText: hint,
-                    hintStyle: TextStyle(
-                        fontSize: 14, color: _p.textFaint),
-                  ),
-                ),
+        SizedBox(
+          height: 46,
+          child: TextField(
+            controller: controller,
+            obscureText: obscure,
+            autocorrect: false,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            onSubmitted: onSubmitted,
+            textAlignVertical: TextAlignVertical.center,
+            style: TextStyle(fontSize: 14, color: _p.textPrimary),
+            cursorColor: _p.lime,
+            decoration: InputDecoration(
+              isDense: true,
+              filled: true,
+              fillColor: _p.surface,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 6, vertical: 14),
+              // 图标嵌在输入框内：左侧固定占位，右侧留给发现/显示按钮。
+              prefixIcon: Icon(icon, size: 17, color: _p.textTertiary),
+              prefixIconConstraints:
+                  const BoxConstraints(minWidth: 40, minHeight: 44),
+              suffixIcon: trailing,
+              suffixIconConstraints:
+                  const BoxConstraints(minWidth: 40, minHeight: 44),
+              hintText: hint,
+              hintStyle: TextStyle(fontSize: 14, color: _p.textFaint),
+              border: const OutlineInputBorder(
+                borderRadius: _fieldRadius,
+                borderSide: BorderSide.none,
               ),
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
-                trailing,
-              ],
-            ],
+              enabledBorder: OutlineInputBorder(
+                borderRadius: _fieldRadius,
+                borderSide: BorderSide(color: _p.line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: _fieldRadius,
+                borderSide: BorderSide(color: _p.lime, width: 1.2),
+              ),
+            ),
           ),
         ),
       ],

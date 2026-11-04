@@ -665,7 +665,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deviceLocal => 'This device';
 
   @override
-  String get clientAudioOut => 'Client audio output';
+  String get clientAudioOut => 'Audio output';
 
   @override
   String scanFailed(String error) {
@@ -790,9 +790,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get lyricsEdit => 'Lyrics View / Edit';
-
-  @override
   String get scrapeMetadata => 'Scrape Online Metadata';
 
   @override
@@ -860,19 +857,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get flacFollowSource => 'FLAC follow source';
 
   @override
-  String get httpStream => 'HTTP audio stream (server-side processing)';
+  String get httpStream => 'HTTP audio stream (server-side)';
 
   @override
   String outParams(String label) {
-    return '$label · 48kHz stereo';
+    return '$label · 48kHz';
   }
 
   @override
   String get httpDirect => 'HTTP direct (original file)';
 
   @override
-  String get httpDirectSub =>
-      'Byte-stream Range seeking · no server processing';
+  String get httpDirectSub => 'Range byte stream · no server processing';
 
   @override
   String get sourceFile => 'Source file';
@@ -883,15 +879,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get symphoniaDecode => 'symphonia server-side decode';
+  String get symphoniaDecode => 'symphonia decode';
 
   @override
   String get resampleMix => 'Resample / Mix';
 
   @override
-  String resampleTarget(String source) {
-    return '$source → 48kHz · stereo';
-  }
+  String get resampleTarget => '48kHz · stereo';
 
   @override
   String get resamplePassthrough => 'Passthrough, keep original format';
@@ -902,7 +896,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get camillaDsp => 'camilladsp DSP chain';
+  String get camillaDsp => 'camilladsp DSP';
 
   @override
   String get presetIdle => 'Disabled · original passthrough';
@@ -916,10 +910,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get clientVolume => 'Client local volume';
+  String get clientVolume => 'Local volume';
 
   @override
-  String get dlnaRendererOutput => 'DLNA renderer output';
+  String get dlnaRendererOutput => 'DLNA renderer';
 
   @override
   String get lyricsLoadFailed => 'Failed to load lyrics';

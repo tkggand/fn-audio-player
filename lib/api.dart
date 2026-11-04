@@ -123,12 +123,28 @@ class ApiClient {
     await prefs.remove('is_admin');
   }
 
-  Future<List<Song>> fetchSongs({String? q}) async {
+  /// 分页拉取曲库歌曲（`GET /api/library/songs`）。
+  ///
+  /// 曲库较大时不要一次取全量：按 [pageSize] 逐页追加，首屏更快、单次响应可控。
+  Future<SongPage> fetchSongPage({
+    int page = 1,
+    int pageSize = 200,
+    String? q,
+  }) async {
     final res = await dio.get('/api/library/songs',
-        queryParameters: {'page': 1, 'page_size': 200, if (q != null) 'q': q},
+        queryParameters: {
+          'page': page,
+          'page_size': pageSize,
+          if (q != null && q.isNotEmpty) 'q': q,
+        },
         options: Options(headers: _authHeader()));
-    final items = (res.data['items'] as List).cast<Map<String, dynamic>>();
-    return items.map(Song.fromJson).toList();
+    return SongPage.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// 兼容旧调用：固定取第一页（200 首），不需要总数的场景（推荐流、搜索预览等）。
+  Future<List<Song>> fetchSongs({String? q}) async {
+    final page = await fetchSongPage(page: 1, pageSize: 200, q: q);
+    return page.items;
   }
 
   /// 音频流地址（just_audio 无法自定义 Header，使用 query token）。
@@ -414,33 +430,6 @@ class ApiClient {
     final res = await dio.get('/api/dlna/status',
         options: Options(headers: _authHeader()));
     return DlnaStatus.fromJson(res.data as Map<String, dynamic>);
-  }
-
-  // ---------- 歌词编辑 ----------
-
-  /// 读取歌词（含原始 LRC 文本，供编辑使用）。
-  Future<LyricData> fetchLyricRaw(int songId) async {
-    final res = await dio.get('/api/library/lyric/$songId',
-        options: Options(headers: _authHeader()));
-    return LyricData.fromJson(res.data as Map<String, dynamic>);
-  }
-
-  /// 保存手动编辑的歌词（来源标记为 user）。
-  Future<LyricData> saveLyric(int songId, String rawLrc) async {
-    final res = await dio.put('/api/library/lyric/$songId',
-        data: {'raw_lrc': rawLrc}, options: Options(headers: _authHeader()));
-    return LyricData.fromJson(res.data as Map<String, dynamic>);
-  }
-
-  /// 上传 LRC 文件（multipart）。
-  Future<LyricData> uploadLyric(
-      int songId, String filename, List<int> bytes) async {
-    final form = FormData.fromMap({
-      'file': MultipartFile.fromBytes(bytes, filename: filename),
-    });
-    final res = await dio.post('/api/library/lyric/upload/$songId',
-        data: form, options: Options(headers: _authHeader()));
-    return LyricData.fromJson(res.data as Map<String, dynamic>);
   }
 
   // ---------- 曲库扫描 / 刮削 ----------
@@ -846,6 +835,34 @@ class Song {
     const lossless = ['flac', 'alac', 'ape', 'wav', 'dsd', 'aiff', 'pcm'];
     return !lossless.any(c.contains);
   }
+}
+
+/// 曲库歌曲分页结果（对应后端 `PageResponse<SongDto>`）。
+class SongPage {
+  const SongPage({
+    required this.items,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
+
+  final List<Song> items;
+  final int total;
+  final int page;
+  final int pageSize;
+
+  /// 是否还有下一页。
+  bool get hasMore => items.isNotEmpty && page * pageSize < total;
+
+  factory SongPage.fromJson(Map<String, dynamic> j) => SongPage(
+        items: ((j['items'] as List?) ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map(Song.fromJson)
+            .toList(),
+        total: (j['total'] as num?)?.toInt() ?? 0,
+        page: (j['page'] as num?)?.toInt() ?? 1,
+        pageSize: (j['page_size'] as num?)?.toInt() ?? 0,
+      );
 }
 
 class DspPreset {

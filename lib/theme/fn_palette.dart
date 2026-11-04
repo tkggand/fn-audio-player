@@ -265,6 +265,21 @@ const FnPalette fnLightPalette = FnPalette(
   isDark: false,
 );
 
+/// 歌词已唱部分的三色渐变配置（左 → 右：起 → 中 → 终）。
+///
+/// 直接改这里的三个颜色即可调整扫色效果，深浅主题各一套。
+const List<Color> fnLyricSweepDark = [
+  Color(0xFFFFC24B), // 金
+  Color(0xFFCDFF4A), // 青柠
+  Color(0xFF3DDC84), // 绿
+];
+
+const List<Color> fnLyricSweepLight = [
+  Color(0xFFA06D00), // 深金
+  Color(0xFF4F6B00), // 深橄榄
+  Color(0xFF0E8A4F), // 深绿
+];
+
 /// 从 Theme 取当前调色板。
 FnPalette fnPaletteOf(BuildContext context) =>
     Theme.of(context).extension<FnPalette>() ?? FnColors.palette;
@@ -321,6 +336,10 @@ class FnColors {
   static Color get primary => palette.lime;
   static Color get primaryAlt => palette.lime;
   static Color get onPrimary => palette.limeInk;
+
+  /// 歌词扫色层的三色渐变（配置见 [fnLyricSweepDark] / [fnLyricSweepLight]）。
+  static List<Color> get lyricSweep =>
+      isDark ? fnLyricSweepDark : fnLyricSweepLight;
 
   static Color get lime => palette.lime;
 

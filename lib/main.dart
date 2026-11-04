@@ -1,5 +1,8 @@
 // ignore_for_file: prefer_const_constructors
 // 本文件的 widget 读取运行时主题令牌（FnColors），const 实例化会冻结配色导致切换主题不刷新，见 lib/theme.dart。
+import 'dart:io';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,7 +19,6 @@ import 'pages/history_page.dart';
 import 'pages/library_page.dart';
 import 'pages/listen_page.dart';
 import 'pages/login_page.dart';
-import 'pages/lyrics_page.dart';
 import 'pages/me_page.dart';
 import 'pages/player_page.dart';
 import 'pages/playlists_page.dart';
@@ -89,8 +91,9 @@ final routerProvider = Provider<GoRouter>((ref) {
                 GoRoute(
                     path: '/library',
                     builder: (context, state) => LibraryPage(
-                      initialTab: state.uri.queryParameters['tab'] ?? 'songs',
-                    )),
+                          initialTab:
+                              state.uri.queryParameters['tab'] ?? 'songs',
+                        )),
               ]),
               StatefulShellBranch(routes: [
                 GoRoute(
@@ -181,13 +184,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
               path: '/settings',
               builder: (context, state) => const SettingsPage()),
-          GoRoute(
-            path: '/lyrics/:id',
-            builder: (context, state) => LyricsPage(
-              songId: int.parse(state.pathParameters['id'] ?? '0'),
-              songTitle: (state.uri.queryParameters['title'] ?? ''),
-            ),
-          ),
         ],
       ),
     ],
@@ -241,6 +237,16 @@ class _FnAudioAppState extends ConsumerState<FnAudioApp>
         FnLocaleController.instance,
       ]),
       builder: (context, _) {
+        final ScrollBehavior? behavior = (Platform.isIOS || Platform.isAndroid)
+            ? null
+            : const MaterialScrollBehavior().copyWith(
+                dragDevices: {
+                  PointerDeviceKind.touch,
+                  PointerDeviceKind.mouse,
+                  PointerDeviceKind.stylus,
+                  PointerDeviceKind.trackpad,
+                },
+              );
         final mode = FnThemeController.instance.value;
         final localeMode = FnLocaleController.instance.value;
         // 静态令牌需先写入亮度，让尚未迁移到 Theme.of(context) 的页面取到新配色。
@@ -253,6 +259,7 @@ class _FnAudioAppState extends ConsumerState<FnAudioApp>
           debugShowCheckedModeBanner: false,
           theme: FnThemes.light,
           darkTheme: FnThemes.dark,
+          scrollBehavior: behavior,
           themeMode: switch (mode) {
             FnThemeMode.dark => ThemeMode.dark,
             FnThemeMode.light => ThemeMode.light,

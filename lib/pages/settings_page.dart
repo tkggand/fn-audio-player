@@ -116,6 +116,30 @@ class _SettingsPageState extends State<SettingsPage>
     if (mounted) setState(() {});
   }
 
+  Future<void> _pickTheme() async {
+    final current = FnThemeController.instance.value;
+    final picked = await showFnSheet<FnThemeMode>(
+      context,
+      eyebrow: 'THEME',
+      title: '主题',
+      subtitle: '暗色 · 浅色 · 跟随系统',
+      children: [
+        for (final e in <FnThemeMode, String>{
+          FnThemeMode.dark: '深色',
+          FnThemeMode.light: '浅色',
+          FnThemeMode.auto: '跟随系统',
+        }.entries)
+          FnOptionRow(
+            title: e.value,
+            icon: CupertinoIcons.moon_stars,
+            on: e.key == current,
+            onTap: () => Navigator.pop(context, e.key),
+          ),
+      ],
+    );
+    if (picked != null) await _setTheme(picked);
+  }
+
   Future<void> _pickLanguage() async {
     final l = context.l10n;
     final current = FnLocaleController.instance.value;
@@ -350,49 +374,16 @@ class _SettingsPageState extends State<SettingsPage>
             if (fnBpOf(context) == FnBp.desktop) _profileCard(username, admin),
             const FnGroupLabel('外观'),
             FnGroupCard(children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
-                child: Row(
-                  children: [
-                    Icon(CupertinoIcons.moon_stars,
-                        size: 18, color: FnColors.textSecondary),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('主题',
-                              style: TextStyle(
-                                  fontSize: 14.5,
-                                  color: FnColors.textPrimary)),
-                          Text('暗色 · 浅色 · 跟随系统',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  color: FnColors.textSecondary)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                child: FnSegmented(
-                  labels: const ['深色', '浅色', '跟随系统'],
-                  index: switch (themeMode) {
-                    FnThemeMode.dark => 0,
-                    FnThemeMode.light => 1,
-                    FnThemeMode.auto => 2,
-                  },
-                  onChanged: (i) => _setTheme(
-                    switch (i) {
-                      0 => FnThemeMode.dark,
-                      1 => FnThemeMode.light,
-                      _ => FnThemeMode.auto,
-                    },
-                  ),
-                  lime: true,
-                ),
+              FnListRow(
+                icon: CupertinoIcons.moon_stars,
+                title: '主题',
+                subtitle: '暗色 · 浅色 · 跟随系统',
+                value: switch (themeMode) {
+                  FnThemeMode.dark => '深色',
+                  FnThemeMode.light => '浅色',
+                  FnThemeMode.auto => '跟随系统',
+                },
+                onTap: _pickTheme,
               ),
               FnListRow(
                 icon: CupertinoIcons.globe,
@@ -445,6 +436,12 @@ class _SettingsPageState extends State<SettingsPage>
                   _ => '关闭',
                 },
                 onTap: () => context.push('/replaygain'),
+              ),
+              FnListRow(
+                icon: CupertinoIcons.device_phone_portrait,
+                title: '播放设备',
+                subtitle: 'DLNA 投屏与本机扬声器',
+                onTap: () => context.push('/devices'),
               ),
               FnListRow(
                 icon: CupertinoIcons.music_note_2,

@@ -439,40 +439,12 @@ class _DiscoverPageState extends State<DiscoverPage>
               actionLabel: '曲库',
               onAction: () => context.push('/library?tab=albums'),
             ),
-            if (fnBpOf(context).isWide)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: kFnPad),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount:
-                        fnGridCols(context, mobile: 2, laptop: 3, desktop: 6),
-                    mainAxisSpacing: 14,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 0.7,
-                  ),
-                  itemCount: _albums.length.clamp(0, 12),
-                  itemBuilder: (context, i) {
-                    final a = _albums[i];
-                    final id = a.id ?? 0;
-                    return FnAlbumCell(
-                      albumId: id,
-                      name: a.name,
-                      artist: a.subtitle ?? '',
-                      onTap: () => context.push(
-                          '/album/$id?artist=${Uri.encodeComponent(a.subtitle ?? '')}&title=${Uri.encodeComponent(a.name)}'),
-                    );
-                  },
-                ),
-              )
-            else
             SizedBox(
               height: 208,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: kFnPad),
-                itemCount: _albums.length.clamp(0, 10),
+                itemCount: _albums.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 12),
                 itemBuilder: (context, i) {
                   final a = _albums[i];
@@ -483,8 +455,7 @@ class _DiscoverPageState extends State<DiscoverPage>
                       albumId: id,
                       name: a.name,
                       artist: a.subtitle ?? '',
-                      onTap: () =>
-                          context.push('/album/$id?artist=${Uri.encodeComponent(a.subtitle ?? '')}&title=${Uri.encodeComponent(a.name)}'),
+                      onTap: () => _openAlbum(a),
                     ),
                   );
                 },
@@ -525,6 +496,11 @@ class _DiscoverPageState extends State<DiscoverPage>
     } catch (e) {
       if (mounted) fnToast(context, '操作失败：$e');
     }
+  }
+
+  void _openAlbum(AggregateItem a) {
+    context.push(
+        '/album/${a.id ?? 0}?artist=${Uri.encodeComponent(a.subtitle ?? '')}&title=${Uri.encodeComponent(a.name)}');
   }
 }
 

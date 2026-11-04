@@ -493,6 +493,7 @@ class _NowCard extends StatelessWidget {
                     duration: PlayerController.instance.durationSec > 0
                         ? PlayerController.instance.durationSec
                         : (song.duration ?? 0),
+                    buffered: PlayerController.instance.bufferedSec,
                     onSeek: PlayerController.instance.seek,
                     timeStyle: TextStyle(
                       fontSize: 10,

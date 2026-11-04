@@ -409,7 +409,7 @@
   "rescan": "重新扫描",
   "availableDevices": "可用设备",
   "deviceLocal": "本机",
-  "clientAudioOut": "客户端音频输出",
+  "clientAudioOut": "音频输出",
   "scanFailed": "扫描失败：{error}",
   "@scanFailed": {
     "placeholders": {
@@ -495,7 +495,6 @@
       }
     }
   },
-  "lyricsEdit": "歌词查看 / 编辑",
   "scrapeMetadata": "联网刮削元数据",
   "scrapeDone": "刮削完成：歌词 {lyrics} 封面 {cover}",
   "@scrapeDone": {
@@ -553,8 +552,8 @@
   "dlnaPush": "DLNA 推送",
   "rendererFallback": "渲染器",
   "flacFollowSource": "FLAC 跟随源",
-  "httpStream": "HTTP 音频流（服务端整段处理）",
-  "outParams": "{label} · 48kHz 立体声",
+  "httpStream": "HTTP 音频流（服务端处理）",
+  "outParams": "{label} · 48kHz",
   "@outParams": {
     "placeholders": {
       "label": {
@@ -563,7 +562,7 @@
     }
   },
   "httpDirect": "HTTP 直出（原始文件）",
-  "httpDirectSub": "字节流 Range 寻址 · 服务端不处理",
+  "httpDirectSub": "Range 字节流 · 服务端不处理",
   "sourceFile": "源文件",
   "decodeToPcm": "解码 {codec} → PCM",
   "@decodeToPcm": {
@@ -573,16 +572,9 @@
       }
     }
   },
-  "symphoniaDecode": "symphonia 服务端解码",
+  "symphoniaDecode": "symphonia 解码",
   "resampleMix": "重采样 / 混音",
-  "resampleTarget": "{source} → 48kHz · 立体声",
-  "@resampleTarget": {
-    "placeholders": {
-      "source": {
-        "type": "String"
-      }
-    }
-  },
+  "resampleTarget": "48kHz · 立体声",
   "resamplePassthrough": "直通，保持原始格式",
   "presetWithName": "音效预设 · {name}",
   "@presetWithName": {
@@ -592,7 +584,7 @@
       }
     }
   },
-  "camillaDsp": "camilladsp DSP 链路处理",
+  "camillaDsp": "camilladsp DSP",
   "presetIdle": "未启用 · 原声直通",
   "volumeMuted": "音量 · 已静音",
   "volumePercent": "音量 {percent}%",
@@ -603,8 +595,8 @@
       }
     }
   },
-  "clientVolume": "客户端本地音量",
-  "dlnaRendererOutput": "DLNA 渲染器输出",
+  "clientVolume": "本地音量",
+  "dlnaRendererOutput": "DLNA 渲染器",
   "lyricsLoadFailed": "歌词加载失败",
   "noLyrics": "暂无歌词",
   "noLyricsHint": "可在 Web 端编辑或上传 LRC 文件",

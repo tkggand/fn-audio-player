@@ -33,15 +33,12 @@ class _AppFrameState extends State<AppFrame> {
     // 壳例外（design/v3 §4/§5）：player / lyrics 三档全屏沉浸；
     // listen 在 mobile / laptop 是全屏封面流，desktop 并入首页（discover）；
     // login 独立页不加载壳（js/shell.js inject 的 page === 'login' 判断）。
-    if (loc == '/login' ||
-        loc == '/player' ||
-        loc.startsWith('/lyrics/') ||
+    if (loc == '/login' || loc == '/player' ||
         (bp == FnBp.laptop && (loc == '/' || loc == '/listen'))) {
       return widget.child;
     }
 
-    // mobile：除 listen / player / lyrics 外的所有页面都挂 4 Tab + mini 条
-    //（design/v3 js/shell.js 对 login / listen 之外的页面一律注入）。
+    // mobile：除 login / player 外的页面都挂 4 Tab；mini 条只在发现 / 曲库页展示。
     if (bp.isMobile) {
       return AppShell(location: loc, child: widget.child);
     }

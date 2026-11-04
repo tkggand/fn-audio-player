@@ -219,6 +219,7 @@ class _PlayerBarState extends State<PlayerBar> {
           child: FnScrubber(
             position: pos,
             duration: dur > 0 ? dur : (song.duration?.toDouble() ?? 0),
+            buffered: c.bufferedSec,
             height: 18,
             trackHeight: 3,
             onSeek: (v) => c.seek(v),
